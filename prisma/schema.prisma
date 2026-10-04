@@ -1,0 +1,108 @@
+// ============================================================
+// Prisma Schema — Focus Point
+// نظام إدارة مساحة دراسة (طاولات دراسة + مراسم فنية)
+//
+// ملاحظة إصدار Prisma 7:
+// - provider = "prisma-client" (العميل الجديد الخالي من Rust)
+// - output = "./generated/prisma" (مطلوب — يُولَّد العميل خارج node_modules)
+// - إعدادات الاتصال (url) لا توضع هنا بل في prisma.config.ts
+// ============================================================
+
+generator client {
+  provider = "prisma-client"
+  output   = "./generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// الطلاب
+// ============================================================
+model Student {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  phone     String?
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  sessions  Session[]
+
+  @@map("students")
+
+  // ملاحظة: في PostgreSQL، gen_random_uuid() و now() هما الدوال
+  // الافتراضية على مستوى قاعدة البيانات — أي حماية/تحقق إضافي
+  // يتم يدوياً داخل route handlers (لا يوجد RLS/أمان على مستوى DB).
+}
+
+// ============================================================
+// الأماكن (كراسي داخل قاعات)
+// كل صف = كرسي فعلي واحد:
+//   - room: القاعة ('social' | 'silent' | 'smoking') — CHECK عبر SQL
+//   - group_label: اسم الطاولة/البار الذي يتبع له الكرسي
+//   - seat_number: رقم الكرسي داخل مجموعته
+//   - seat_group: مجموعة التخصيص الدقيقة (المنطق الذي يعتمد عليه
+//     تخصيص الكرسي) — CHECK عبر SQL:
+//       'social_table'  → كل كراسي Social
+//       'silent_writing'→ طاولتا الكتابة الكبيرتان في Silent
+//       'silent_bar'    → البار الدراسي في Silent
+//       'smoking_bar'   → كل كراسي Smoking
+// ============================================================
+model Spot {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  room        String // 'social' | 'silent' | 'smoking' — تتحقق منها CHECK على مستوى DB
+  groupLabel  String    @map("group_label")
+  seatNumber  Int       @map("seat_number")
+  seatGroup   String    @map("seat_group") // مجموعة التخصيص (تتحقق منها CHECK على مستوى DB)
+  isOccupied  Boolean   @default(false) @map("is_occupied")
+  sessions    Session[]
+
+  @@map("spots")
+}
+
+// ============================================================
+// الجلسات (ربط الطالب بالمكان)
+// ============================================================
+model Session {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId String   @map("student_id") @db.Uuid
+  spotId    String   @map("spot_id") @db.Uuid
+  checkIn   DateTime @default(now()) @map("check_in") @db.Timestamptz(6)
+  checkOut  DateTime? @map("check_out") @db.Timestamptz(6)
+  status    String   @default("active") // 'active' | 'ended' — يُتحقق منها دائماً في الكود
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  spot    Spot    @relation(fields: [spotId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  orders  Order[]
+
+  @@map("sessions")
+}
+
+// ============================================================
+// الخدمات المتاحة للمساحة
+// ============================================================
+model Service {
+  id       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name     String
+  category String? // تصنيف اختياري (طباعة/مشروبات/...)
+  price    Decimal @default(0) @db.Decimal // يستخدم لاحقاً لحساب الأرباح
+  orders   Order[]
+
+  @@map("services")
+}
+
+// ============================================================
+// الطلبات (خدمة مطلوبة خلال جلسة)
+// ============================================================
+model Order {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId String   @map("session_id") @db.Uuid
+  serviceId String   @map("service_id") @db.Uuid
+  status    String   @default("pending") // 'pending' | 'done' | 'cancelled' — يُتحقق منها في الكود + CHECK في DB
+  details   Json?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@map("orders")
+}

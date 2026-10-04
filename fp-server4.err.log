@@ -1,0 +1,5 @@
+⚠ Attempted to load @next/swc-win32-x64-msvc, but an error occurred: \\?\C:\Users\Rebo\Desktop\StudyZone\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node is not a valid Win32 application.
+\\?\C:\Users\Rebo\Desktop\StudyZone\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node
+⚠ Warning: Next.js ignored package-lock.json in C:\Users\Rebo because it would include your home directory (C:\Users\Rebo).
+ To use this directory, set `outputFileTracingRoot` in your Next.js config.
+

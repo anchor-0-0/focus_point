@@ -1,0 +1,6 @@
+▲ Next.js 16.3.4
+- Local:         http://localhost:3000
+- Network:       http://172.18.0.1:3000
+✓ Ready in 768ms
+✓ Running next.config.ts took 683ms
+◇ injected env (0) from .env.local // tip: ◈ secrets for agents [www.dotenvx.com]

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="152.41 312.63 209 140.36" role="img" aria-label="Focus Point">
+  <path fill="#402128" d="M152.41,399.29h32.18s.78,28.11-32.18,28.11v25.59s51.28,0,58.74-46.33v-30.05h-35.57l-23.17,22.68Z"/>
+  <polygon fill="#593130" points="188.47 340.94 211.15 340.94 211.15 381.65 152.41 399.29 171.21 359.94 188.47 340.94"/>
+  <polygon fill="#997f68" points="152.41 399.29 188.47 371.76 188.47 312.63 152.41 341.33 152.41 399.29"/>
+  <text x="220.28" y="372.24" fill="#402128" font-family="itfQomraArabic-Bold,'itf Qomra Arabic',Arial,sans-serif" font-size="39" font-weight="700">
+    <tspan x="220.28" y="372.24">FOCUS</tspan>
+    <tspan x="220.28" y="409.26">POINT</tspan>
+  </text>
+</svg>
