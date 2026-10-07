@@ -2,11 +2,16 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-error";
 import { requireAdminJson } from "@/lib/admin-require";
+import { computeBilling } from "@/lib/billing";
+import { readHourlyRate } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
 // إنهاء جلسة نشطة:
 //   - sessions.status = 'ended'  و check_out = now()
+//   - حساب الأجر المالي للجلسة: billable_hours (حد أدنى ساعة) +
+//     session_amount (ساعات × سعر الساعة) + hourly_rate_snapshot (السعر
+//     وقت الإنهاء) — تُحفظ كلها داخل نفس الـ transaction.
 //   - spots.is_occupied = false
 //   - orders غير الملبّاة (pending) → cancelled (تختفي من إشعارات الداشبورد)
 // كل ذلك داخل transaction واحدة عبر Prisma.
@@ -39,7 +44,7 @@ export async function POST(request: Request) {
     // نقرأ الجلسة — إن لم تكن موجودة يُعاد 404.
     const session = await prisma.session.findUnique({
       where: { id: sessionId },
-      select: { id: true, status: true, spotId: true },
+      select: { id: true, status: true, spotId: true, checkIn: true },
     });
 
     if (!session) {
@@ -54,25 +59,46 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, already_ended: true });
     }
 
-    // تحديث ذرّي ضمن transaction واحدة: إنهاء الجلسة + تحرير المكان +
-    // إلغاء كل طلبات الخدمة المعلقة (pending) للجلسة قبل أن تُلبّى،
-    // فتختفي تلقائياً من قائمة الإشعارات في الداشبورد فوراً (status=cancelled).
-    await prisma.$transaction([
-      prisma.session.update({
+    // تحديث ذرّي ضمن transaction واحدة: حساب الأجر + إنهاء الجلسة +
+    // تحرير المكان + إلغاء كل طلبات الخدمة المعلقة (pending) للجلسة
+    // قبل أن تُلبّى، فتختفي تلقائياً من قائمة الإشعارات في الداشبورد.
+    const checkOut = new Date();
+    const billing = await prisma.$transaction(async (tx) => {
+      const hourlyRate = await readHourlyRate(tx);
+
+      const billing = computeBilling(session.checkIn, checkOut, hourlyRate);
+
+      await tx.session.update({
         where: { id: sessionId },
-        data: { status: "ended", checkOut: new Date() },
-      }),
-      prisma.spot.update({
+        data: {
+          status: "ended",
+          checkOut,
+          billableHours: billing.billableHours,
+          sessionAmount: billing.amount,
+          hourlyRateSnapshot: hourlyRate,
+        },
+      });
+
+      await tx.spot.update({
         where: { id: session.spotId },
         data: { isOccupied: false },
-      }),
-      prisma.order.updateMany({
+      });
+
+      await tx.order.updateMany({
         where: { sessionId, status: "pending" },
         data: { status: "cancelled" },
-      }),
-    ]);
+      });
 
-    return NextResponse.json({ ok: true, already_ended: false });
+      return billing;
+    });
+
+    return NextResponse.json({
+      ok: true,
+      already_ended: false,
+      billable_hours: billing.billableHours,
+      session_amount: billing.amount,
+      hourly_rate: billing.amount / billing.billableHours,
+    });
   } catch (err) {
     return jsonError("admin-end-session", err, 500, "تعذّر إنهاء الجلسة");
   }

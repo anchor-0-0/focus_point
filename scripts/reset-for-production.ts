@@ -25,6 +25,7 @@ async function main() {
     students: await prisma.student.count(),
     spots: await prisma.spot.count(),
     services: await prisma.service.count(),
+    settings: await prisma.setting.count(),
   };
   say(`before: ${JSON.stringify(before)}`);
 
@@ -40,6 +41,7 @@ async function main() {
     spots: await prisma.spot.count(),
     occupied: await prisma.spot.count({ where: { isOccupied: true } }),
     services: await prisma.service.count(),
+    settings: await prisma.setting.count(),
   };
   say(`deleted: orders=${delOrders.count} sessions=${delSessions.count} students=${delStudents.count}`);
   say(`spots_reset=${resetSpots.count}`);

@@ -69,6 +69,11 @@ model Session {
   checkIn   DateTime @default(now()) @map("check_in") @db.Timestamptz(6)
   checkOut  DateTime? @map("check_out") @db.Timestamptz(6)
   status    String   @default("active") // 'active' | 'ended' — يُتحقق منها دائماً في الكود
+  // حقول الفوترة — تُحفظ لحظة إنهاء الجلسة داخل نفس الـ transaction
+  // (لا تُمتلأ عند الجلسات النشطة ولا للجلسات المنتهية قبل هذا التحديث).
+  billableHours      Int?     @map("billable_hours") // الساعات المحتسبة للأجر (حد أدنى ساعة)
+  sessionAmount      Decimal? @map("session_amount") @db.Decimal(12, 2) // المبلغ النهائي = ساعات × سعر
+  hourlyRateSnapshot Decimal? @map("hourly_rate_snapshot") @db.Decimal(12, 2) // سعر الساعة لحظة الإنهاء
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   spot    Spot    @relation(fields: [spotId], references: [id], onDelete: Restrict, onUpdate: Cascade)
@@ -105,4 +110,16 @@ model Order {
   service Service @relation(fields: [serviceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   @@map("orders")
+}
+
+// ============================================================
+// الإعدادات العامة (قيمة سلسلة لكل مفتاح)
+//   hourly_rate_syp → سعر الساعة الواحدة بالليرة السورية (عدد صحيح)
+// ============================================================
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("settings")
 }

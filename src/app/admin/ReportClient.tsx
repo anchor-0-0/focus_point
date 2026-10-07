@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { SkeletonLines } from "@/components/SkeletonLines";
 import { useI18n } from "@/components/LanguageProvider";
+import { formatThousands } from "@/lib/money";
+import { durationHM } from "@/lib/format";
+import { RoomHoursRow } from "@/components/RoomHoursRow";
 import type { ReportData } from "@/lib/report";
 
 const STATUS_CLASS: Record<string, string> = {
@@ -18,6 +21,8 @@ export function ReportClient({ initial }: { initial: ReportData }) {
   const [data, setData] = useState<ReportData | null>(initial);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // حارس ترتيب: عند تغيير التاريخين بسرعة تتداخل طلبان — نتجاهل استجابة الأقدم.
+  const loadSeq = useRef(0);
 
   const statusLabel = (status: string): string =>
     status === "pending"
@@ -29,10 +34,7 @@ export function ReportClient({ initial }: { initial: ReportData }) {
           : status;
 
   const fmtMoney = (n: number): string =>
-    `${n.toLocaleString("en", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })} ${t("admin.currency")}`;
+    `${formatThousands(n)} ${t("admin.currency")}`;
 
   const fmtTime = (iso: string): string =>
     new Date(iso).toLocaleTimeString(t("meta.locale"), {
@@ -61,6 +63,7 @@ export function ReportClient({ initial }: { initial: ReportData }) {
   };
 
   async function load(f: string, tEnd: string) {
+    const seq = ++loadSeq.current;
     setLoading(true);
     setError(null);
     try {
@@ -69,15 +72,16 @@ export function ReportClient({ initial }: { initial: ReportData }) {
         { cache: "no-store" }
       );
       const json = await res.json();
+      if (seq !== loadSeq.current) return;
       if (res.ok && json.ok) {
         setData(json as ReportData);
       } else {
         setError(json.error ?? t("admin.report.loadFail"));
       }
     } catch {
-      setError(t("admin.err.network"));
+      if (seq === loadSeq.current) setError(t("admin.err.network"));
     } finally {
-      setLoading(false);
+      if (seq === loadSeq.current) setLoading(false);
     }
   }
 
@@ -181,6 +185,78 @@ export function ReportClient({ initial }: { initial: ReportData }) {
             />
           </div>
 
+          {/* ساعات الفترة */}
+          <section
+            className="flex flex-col gap-5 rounded-xl border border-border bg-surface p-5"
+            style={{ boxShadow: "var(--shadow-card)" }}
+          >
+            <div>
+              <h2 className="admin-section-title text-lg">{t("admin.report.hoursSection")}</h2>
+              <p className="text-sm text-muted">{t("admin.report.hoursSub")}</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <SummaryCard
+                label={t("admin.report.hoursCard")}
+                value={`${data.summary.billable_hours} ${t("common.hourShort")}`}
+                sub={t("admin.report.hoursSub")}
+              />
+              <SummaryCard
+                label={t("admin.report.endedCard")}
+                value={data.summary.ended_sessions}
+                sub={tw("admin.stats.endedSessions", {
+                  n: data.summary.ended_sessions,
+                })}
+              />
+              <SummaryCard
+                label={t("admin.report.avgCard")}
+                value={durationHM(
+                  data.summary.avg_billable_hours * 3600 * 1000,
+                  t("common.hourShort"),
+                  t("common.minuteShort")
+                )}
+                sub={t("admin.stats.avgSub")}
+              />
+            </div>
+            <div
+              className="flex flex-col gap-3 rounded-xl border border-border bg-bg p-4"
+              style={{ borderInlineStart: "4px solid var(--color-primary)" }}
+            >
+              <h3 className="text-sm font-semibold text-primary">
+                {t("admin.report.roomHours")}
+              </h3>
+              <RoomHoursRow
+                label={t("admin.room.social")}
+                value={data.summary.hours_by_room.social}
+                max={Math.max(
+                  data.summary.hours_by_room.social,
+                  data.summary.hours_by_room.silent,
+                  data.summary.hours_by_room.smoking,
+                  1
+                )}
+              />
+              <RoomHoursRow
+                label={t("admin.room.silent")}
+                value={data.summary.hours_by_room.silent}
+                max={Math.max(
+                  data.summary.hours_by_room.social,
+                  data.summary.hours_by_room.silent,
+                  data.summary.hours_by_room.smoking,
+                  1
+                )}
+              />
+              <RoomHoursRow
+                label={t("admin.room.smoking")}
+                value={data.summary.hours_by_room.smoking}
+                max={Math.max(
+                  data.summary.hours_by_room.social,
+                  data.summary.hours_by_room.silent,
+                  data.summary.hours_by_room.smoking,
+                  1
+                )}
+              />
+            </div>
+          </section>
+
           {/* ملخص الخدمات */}
           <section
             className="rounded-xl border border-border bg-surface p-5"
@@ -203,7 +279,7 @@ export function ReportClient({ initial }: { initial: ReportData }) {
                       <td>{sv.name}</td>
                       <td>{sv.count}</td>
                       <td>{sv.done_count}</td>
-                      <td className="tabular-nums">{sv.done_total.toFixed(2)}</td>
+                      <td className="tabular-nums">{formatThousands(sv.done_total)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -265,7 +341,9 @@ export function ReportClient({ initial }: { initial: ReportData }) {
                             <th>{t("admin.col.place")}</th>
                             <th>{t("admin.col.service")}</th>
                             <th>{t("admin.col.details")}</th>
-                            <th>{t("admin.col.price")}</th>
+                            <th>{t("admin.col.qty")}</th>
+                            <th>{t("admin.col.unitPrice")}</th>
+                            <th>{t("admin.col.lineTotal")}</th>
                             <th>{t("admin.col.status")}</th>
                           </tr>
                         </thead>
@@ -285,8 +363,14 @@ export function ReportClient({ initial }: { initial: ReportData }) {
                               >
                                 {o.details_label || "—"}
                               </td>
-                              <td className="tabular-nums">
-                                {o.price.toFixed(2)}
+                              <td className="tabular-nums text-center">
+                                {o.units}
+                              </td>
+                              <td className="tabular-nums text-muted">
+                                {formatThousands(o.price)}
+                              </td>
+                              <td className="tabular-nums font-semibold">
+                                {formatThousands(o.total_price)}
                               </td>
                               <td>
                                 <span
@@ -302,7 +386,7 @@ export function ReportClient({ initial }: { initial: ReportData }) {
                           ))}
                           {studentOrders.length === 0 && (
                             <tr>
-                              <td colSpan={6} className="text-muted">
+                              <td colSpan={8} className="text-muted">
                                 {t("admin.report.noOrders")}
                               </td>
                             </tr>

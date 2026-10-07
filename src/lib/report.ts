@@ -14,9 +14,13 @@ import {
   PAPER_LABELS,
   PRINT_MODE_LABELS,
   ORIENTATION_LABELS,
+  orderTotal,
+  orderUnits,
   type OrderDetails,
 } from "@/lib/orders";
 import ExcelJS from "exceljs";
+import { computeBilling } from "@/lib/billing";
+import { readHourlyRate } from "@/lib/settings";
 
 const TZ = "Asia/Damascus";
 
@@ -58,7 +62,10 @@ function tzOffsetAt(atMs: number): number {
 
 /** بداية "Y-m-d 00:00" وبداية اليوم التالي كطوابع UTC مطلقة. */
 export function damascusDayBoundaries(from: string, to: string) {
-  const toNext = new Date(Date.UTC(...(to.split("-").map(Number) as [number, number, number]), 0));
+  // ملاحظة: شهور Date.UTC تبدأ من صفر؛ نطرح 1 من الشهر دائماً وإلا
+  // انزاحت نهاية الفترة شهراً كاملاً للأمام (2026-10 → 2026-11).
+  const [toY, toM, toD] = to.split("-").map(Number);
+  const toNext = new Date(Date.UTC(toY, toM - 1, toD, 0));
   toNext.setUTCDate(toNext.getUTCDate() + 1);
   const toStr = toNext.toISOString().slice(0, 10);
 
@@ -78,7 +85,12 @@ export type ReportOrder = {
   order_id: string;
   created_at: string;
   status: string;
+  /** سعر الوحدة كما هو في جدول الخدمات. */
   price: number;
+  /** عدد الوحدات (كمية المشروبات أو نسخ الطباعة). */
+  units: number;
+  /** إجمالي الطلب = سعر الوحدة × الوحدات. */
+  total_price: number;
   service_name: string;
   service_category: string | null;
   student_id: string;
@@ -102,6 +114,14 @@ export type ReportSession = {
   check_out: string | null;
   duration_sec: number;
   status: string;
+  /** الساعات المحتسبة للجلسة (للجلسات النشطة تُحسب الآن تقديرياً). */
+  billable_hours: number;
+  /** مبلغ الجلسة = ساعات × سعر الساعة (لقطة أو حساب الآن). */
+  session_amount: number;
+  /** مجموع الخدمات المنفذة (done) في الجلسة. */
+  services_total: number;
+  /** المبلغ الكلي = مبلغ الجلسة + الخدمات. */
+  total: number;
 };
 
 export type ReportStudent = {
@@ -132,6 +152,10 @@ export type ReportData = {
     pending_count: number;
     cancelled_count: number;
     done_revenue: number;
+    ended_sessions: number;
+    billable_hours: number;
+    avg_billable_hours: number;
+    hours_by_room: { social: number; silent: number; smoking: number };
   };
   students: ReportStudent[];
   orders: ReportOrder[];
@@ -155,15 +179,20 @@ function detailsLabel(raw: OrderDetails | null): string {
   if (d.orientation)
     parts.push(ORIENTATION_LABELS[d.orientation] ?? d.orientation);
   if (d.file_name) parts.push(`ملف: ${d.file_name}`);
-  if (typeof d.quantity === "number") parts.push(`كمية: ${d.quantity}`);
+  // للطباعة المستمرة عبر `copies`؛ نتجنب تكرار "2 نسخ" عند وجود quantity أيضاً.
+  if (typeof d.quantity === "number" && typeof d.copies !== "number")
+    parts.push(`كمية: ${d.quantity}`);
   if (d.sugar) parts.push(`سكر: ${d.sugar}`);
   if (d.note) parts.push(`ملاحظة: ${d.note}`);
 
   return parts.join(" • ");
 }
 
-function priceOf(order: { status: string; price: number }): number {
-  return order.status === "done" ? order.price : 0;
+function priceOf(order: {
+  status: string;
+  total_price: number;
+}): number {
+  return order.status === "done" ? order.total_price : 0;
 }
 
 /** جلب بيانات الفترة من قاعدة البيانات (قراءة فقط). */
@@ -173,12 +202,17 @@ export async function fetchReport(
   from: string,
   to: string
 ): Promise<ReportData> {
+  const hourlyRate = await readHourlyRate(prisma);
   const [sessions, orders] = await Promise.all([
     prisma.session.findMany({
       where: { checkIn: { gte: fromDate, lt: toDate } },
       include: {
         student: { select: { id: true, name: true, phone: true } },
         spot: { select: { room: true, groupLabel: true, seatNumber: true } },
+        orders: {
+          where: { status: "done" },
+          select: { details: true, service: { select: { price: true } } },
+        },
       },
       orderBy: { checkIn: "asc" },
     }),
@@ -197,24 +231,47 @@ export async function fetchReport(
     }),
   ]);
 
-  const reportOrders: ReportOrder[] = orders.map((o) => ({
-    order_id: o.id,
-    created_at: o.createdAt.toISOString(),
-    status: o.status,
-    price: Number(o.service.price),
-    service_name: o.service.name,
-    service_category: o.service.category,
-    student_id: o.session.student.id,
-    student_name: o.session.student.name,
-    student_phone: o.session.student.phone,
-    room: o.session.spot?.room ?? null,
-    group_label: o.session.spot?.groupLabel ?? null,
-    seat_number: o.session.spot?.seatNumber ?? null,
-    details_label: detailsLabel((o.details as OrderDetails | null) ?? null),
-  }));
+  const reportOrders: ReportOrder[] = orders.map((o) => {
+    const details = (o.details as OrderDetails | null) ?? null;
+    const unitPrice = Number(o.service.price);
+    return {
+      order_id: o.id,
+      created_at: o.createdAt.toISOString(),
+      status: o.status,
+      price: unitPrice,
+      units: orderUnits(details),
+      total_price: orderTotal(unitPrice, details),
+      service_name: o.service.name,
+      service_category: o.service.category,
+      student_id: o.session.student.id,
+      student_name: o.session.student.name,
+      student_phone: o.session.student.phone,
+      room: o.session.spot?.room ?? null,
+      group_label: o.session.spot?.groupLabel ?? null,
+      seat_number: o.session.spot?.seatNumber ?? null,
+      details_label: detailsLabel(details),
+    };
+  });
 
   const reportSessions: ReportSession[] = sessions.map((s) => {
     const checkOut = s.checkOut?.getTime() ?? Date.now();
+    const checkOutDate = new Date(checkOut);
+
+    // لقطة الفوترة إن وُجدت، وإن لم تكن (جلسة منتهية قبل الميزة أو نشطة
+    // الآن) نحسبها تقديرياً وفق نفس قاعدة computeBilling.
+    let billableHours = s.billableHours;
+    let sessionAmount = s.sessionAmount ? Number(s.sessionAmount) : null;
+    if (billableHours == null || sessionAmount == null) {
+      const billing = computeBilling(s.checkIn, checkOutDate, hourlyRate);
+      billableHours = billing.billableHours;
+      sessionAmount = billing.amount;
+    }
+
+    const servicesTotal = s.orders.reduce(
+      (sum, o) => sum + orderTotal(Number(o.service.price), o.details as OrderDetails | null),
+      0
+    );
+
     return {
       session_id: s.id,
       student_id: s.student.id,
@@ -230,6 +287,10 @@ export async function fetchReport(
         Math.round((checkOut - s.checkIn.getTime()) / 1000)
       ),
       status: s.status,
+      billable_hours: billableHours,
+      session_amount: sessionAmount,
+      services_total: servicesTotal,
+      total: sessionAmount + servicesTotal,
     };
   });
 
@@ -278,12 +339,24 @@ export async function fetchReport(
     agg.count += 1;
     if (o.status === "done") {
       agg.done_count += 1;
-      agg.done_total += o.price;
+      agg.done_total += o.total_price;
     }
     serviceMap.set(key, agg);
   }
 
-  const summary = {
+  // إجماليات الساعات للجلسات المنتهية فقط (المبالغ المسوّاة فعلياً).
+  const endedSessions = reportSessions.filter((s) => s.status === "ended");
+  const billableHoursTotal = endedSessions.reduce(
+    (sum, s) => sum + s.billable_hours,
+    0
+  );
+  const hoursByRoom = (room: string) =>
+    endedSessions.reduce(
+      (sum, s) => sum + (s.room === room ? s.billable_hours : 0),
+      0
+    );
+
+  const summary: ReportData["summary"] = {
     students_count: students.length,
     sessions_count: reportSessions.length,
     orders_count: reportOrders.length,
@@ -294,6 +367,15 @@ export async function fetchReport(
       (sum, o) => sum + priceOf(o),
       0
     ),
+    ended_sessions: endedSessions.length,
+    billable_hours: billableHoursTotal,
+    avg_billable_hours:
+      endedSessions.length > 0 ? billableHoursTotal / endedSessions.length : 0,
+    hours_by_room: {
+      social: hoursByRoom("social"),
+      silent: hoursByRoom("silent"),
+      smoking: hoursByRoom("smoking"),
+    },
   };
 
   return {
@@ -368,6 +450,20 @@ export async function buildReportWorkbook(
   const rangeLabel = `${report.from} إلى ${report.to}`;
   const title = "Focus Point — التقرير اليومي";
 
+  // أدوات تنسيق زمنية مشتركة لكل الأوراق.
+  const fmtDur = (sec: number) => {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  };
+  const fmtTime = (iso: string | null) =>
+    iso ? new Date(iso).toLocaleString("ar-SY") : "—";
+  const fmtHM = (hours: number) => {
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+    return `${h}س ${m}د`;
+  };
+
   // ───────────────────────── 1) ملخص اليوم ─────────────────────────
   const s1 = wb.addWorksheet("ملخص اليوم", {
     views: [{ rightToLeft: true } as ExcelJS.WorksheetView],
@@ -390,6 +486,9 @@ export async function buildReportWorkbook(
     ["طلبات معلقة", report.summary.pending_count, "لم تُنفَّذ بعد (أُلغي تلقائياً في نهاية الجلسة إذا ظل معلقاً)"],
     ["طلبات ملغاة", report.summary.cancelled_count, "أُلغي تلقائياً عند إنهاء الجلسة"],
     ["إيرادات اليوم", report.summary.done_revenue, "مجموع سعر الطلبات المكتملة فقط"],
+    ["جلسات منتهية", report.summary.ended_sessions, "جلسات أُنهيت في الفترة (مسوّاة مالياً)"],
+    ["الساعات المحتسبة", report.summary.billable_hours, "مجموع ساعات الجلسات المنتهية — حد أدنى ساعة للجلسة"],
+    ["متوسط مدة الجلسة", fmtHM(report.summary.avg_billable_hours), "إجمالي الساعات ÷ عدد الجلسات المنتهية"],
   ];
   rows.forEach(([label, value, note], i) => {
     const r = s1.getRow(5 + i);
@@ -455,10 +554,20 @@ export async function buildReportWorkbook(
   const s3 = wb.addWorksheet("تفاصيل الطلبات", {
     views: [{ rightToLeft: true } as ExcelJS.WorksheetView],
   });
-  s3.columns = colWidths([20, 26, 14, 14, 40, 16, 12]);
+  s3.columns = colWidths([20, 26, 14, 14, 34, 8, 14, 16, 12]);
   headerRow(
     s3,
-    ["وقت الطلب", "الطالب", "المكان", "الخدمة", "التفاصيل", "السعر (ل.س)", "الحالة"],
+    [
+      "وقت الطلب",
+      "الطالب",
+      "المكان",
+      "الخدمة",
+      "التفاصيل",
+      "الكمية",
+      "سعر الوحدة",
+      "الإجمالي (ل.س)",
+      "الحالة",
+    ],
     1
   );
   const statusLabel: Record<string, string> = {
@@ -479,9 +588,12 @@ export async function buildReportWorkbook(
     r.getCell(3).value = place || "—";
     r.getCell(4).value = o.service_name;
     r.getCell(5).value = o.details_label;
-    moneyCell(r.getCell(6), o.price);
-    r.getCell(7).value = statusLabel[o.status] ?? o.status;
-    r.getCell(7).font = {
+    r.getCell(6).value = o.units;
+    r.getCell(6).alignment = { horizontal: "center" };
+    moneyCell(r.getCell(7), o.price);
+    moneyCell(r.getCell(8), o.total_price);
+    r.getCell(9).value = statusLabel[o.status] ?? o.status;
+    r.getCell(9).font = {
       bold: true,
       color: {
         argb:
@@ -513,13 +625,6 @@ export async function buildReportWorkbook(
     ["وقت الدخول", "الطالب", "المكان", "المدة (ساعة:دقيقة)", "وقت الخروج", "الحالة"],
     1
   );
-  const fmtDur = (sec: number) => {
-    const h = Math.floor(sec / 3600);
-    const m = Math.floor((sec % 3600) / 60);
-    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-  };
-  const fmtTime = (iso: string | null) =>
-    iso ? new Date(iso).toLocaleString("ar-SY") : "—";
   report.sessions.forEach((se, i) => {
     const r = s4.getRow(2 + i);
     r.getCell(1).value = fmtTime(se.check_in);
@@ -548,6 +653,101 @@ export async function buildReportWorkbook(
       });
     }
   });
+
+  // ───────────────────── 5) السجل المالي (الجلسات) ─────────────
+  // أعمدة الأرقام المالية كما يريدها صاحب المكان، مرتبة زمنياً من
+  // الأقدم إلى الأحدث، مع صف «المجموع» يجمع الساعات والمبالغ كلها.
+  const roomLabel: Record<string, string> = {
+    social: "القاعة الاجتماعية",
+    silent: "القاعة الصامتة",
+    smoking: "منطقة التدخين",
+  };
+  const s5 = wb.addWorksheet("السجل المالي", {
+    views: [{ rightToLeft: true } as ExcelJS.WorksheetView],
+  });
+  s5.columns = colWidths([24, 18, 20, 20, 18, 16, 16, 16, 16]);
+  headerRow(
+    s5,
+    [
+      "اسم الطالب",
+      "القاعة",
+      "وقت الدخول",
+      "وقت الخروج",
+      "المدة الفعلية",
+      "الساعات المحتسبة",
+      "مبلغ الجلسة",
+      "مجموع الخدمات",
+      "المبلغ الكلي",
+    ],
+    1
+  );
+
+  // السجل يعتمد الجلسات المنتهية فقط (المبالغ المسوّاة فعلياً).
+  const financeSessions = report.sessions.filter(
+    (se) => se.status === "ended"
+  );
+  let sumHours = 0;
+  let sumSessions = 0;
+  let sumServices = 0;
+  let sumTotal = 0;
+
+  financeSessions.forEach((se, i) => {
+    const r = s5.getRow(2 + i);
+    r.getCell(1).value = se.student_name;
+    r.getCell(1).font = { bold: true, color: { argb: C_TEXT } };
+    r.getCell(2).value = se.room ? (roomLabel[se.room] ?? se.room) : "—";
+    r.getCell(3).value = fmtTime(se.check_in);
+    r.getCell(4).value = fmtTime(se.check_out);
+    r.getCell(5).value = fmtDur(se.duration_sec);
+    r.getCell(6).value = se.billable_hours;
+    moneyCell(r.getCell(7), se.session_amount);
+    moneyCell(r.getCell(8), se.services_total);
+    moneyCell(r.getCell(9), se.total);
+    r.getCell(6).alignment = { horizontal: "right" };
+    if (i % 2 === 1) {
+      r.eachCell((c) => {
+        if (c.value !== undefined && c.value !== null) {
+          c.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: C_BG },
+          };
+        }
+      });
+    }
+    sumHours += se.billable_hours;
+    sumSessions += se.session_amount;
+    sumServices += se.services_total;
+    sumTotal += se.total;
+  });
+
+  if (financeSessions.length > 0) {
+    const rt = s5.getRow(2 + financeSessions.length);
+    rt.getCell(1).value = "المجموع";
+    rt.getCell(6).value = sumHours;
+    moneyCell(rt.getCell(7), sumSessions);
+    moneyCell(rt.getCell(8), sumServices);
+    moneyCell(rt.getCell(9), sumTotal);
+    for (let c = 1; c <= 9; c += 1) {
+      const cell = rt.getCell(c);
+      cell.font = {
+        bold: true,
+        color: { argb: C_PRIMARY },
+        size: 12,
+      };
+      cell.border = {
+        top: { style: "medium", color: { argb: C_PRIMARY } },
+      };
+      if (c !== 2 && c !== 3 && c !== 4 && c !== 5) {
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: C_BG },
+        };
+      }
+      cell.alignment = { horizontal: "center", vertical: "middle" };
+    }
+  }
 
   const buf = await wb.xlsx.writeBuffer();
   return Buffer.from(buf);

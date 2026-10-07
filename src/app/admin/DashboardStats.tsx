@@ -5,6 +5,9 @@ import { usePolling } from "@/lib/admin-hooks";
 import { POLL_STANDARD_MS } from "@/lib/admin-poll";
 import { SkeletonLines } from "@/components/SkeletonLines";
 import { useI18n } from "@/components/LanguageProvider";
+import { formatThousands } from "@/lib/money";
+import { durationHM } from "@/lib/format";
+import { RoomHoursRow } from "@/components/RoomHoursRow";
 
 type OccupancyRow = {
   room: string;
@@ -14,7 +17,13 @@ type OccupancyRow = {
 
 type Stats = {
   revenue: number;
+  revenue_services: number;
+  revenue_sessions: number;
   done_count: number;
+  billed_hours_today: number;
+  ended_sessions_today: number;
+  avg_billable_hours: number;
+  hours_by_room: { social: number; silent: number; smoking: number };
   occupied_total: number;
   total_spots: number;
   occupancy: OccupancyRow[];
@@ -65,53 +74,119 @@ export function DashboardStats() {
   const socialRow = stats.occupancy.find((r) => r.room === "social");
   const silentRow = stats.occupancy.find((r) => r.room === "silent");
   const smokingRow = stats.occupancy.find((r) => r.room === "smoking");
+  const roomHoursMax = Math.max(
+    stats.hours_by_room.social,
+    stats.hours_by_room.silent,
+    stats.hours_by_room.smoking,
+    1
+  );
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      {/* بطاقة الإيرادات — بطلة الداشبورد بخلفية عنابية */}
-      <section className="stat-card-hero">
-        <div>
-          <h2 className="stat-label">{t("admin.stats.revenue")}</h2>
-          <p className="stat-value tabular-nums">
-            {stats.revenue.toFixed(2)} <span className="text-base font-medium text-white/85">{t("admin.currency")}</span>
-          </p>
-          <p className="stat-sub">
-            {tw("admin.stats.done", { n: stats.done_count })}{" "}
-            {refreshing && `• ${t("admin.stats.refreshing")}`}
-          </p>
-        </div>
-      </section>
+    <div className="flex flex-col gap-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        {/* بطاقة الإيرادات — بطلة الداشبورد بخلفية عنابية */}
+        <section className="stat-card-hero">
+          <div>
+            <h2 className="stat-label">{t("admin.stats.revenue")}</h2>
+            <p className="stat-value tabular-nums">
+              {formatThousands(stats.revenue)} <span className="text-base font-medium text-white/85">{t("admin.currency")}</span>
+            </p>
+            <p className="stat-sub">
+              {tw("admin.stats.revenueBreakdown", {
+                s: `${formatThousands(stats.revenue_sessions)} ${t("admin.currency")}`,
+                o: `${formatThousands(stats.revenue_services)} ${t("admin.currency")}`,
+              })}
+            </p>
+            <p className="stat-sub">
+              {tw("admin.stats.done", { n: stats.done_count })}{" "}
+              {refreshing && `• ${t("admin.stats.refreshing")}`}
+            </p>
+          </div>
+        </section>
 
-      {/* بطاقة الإشغال الحي — حد جانبي سميك بلون بني */}
-      <section
-        className="stat-card flex flex-col justify-between gap-4"
-        style={{ borderInlineStart: "4px solid var(--color-brown)" }}
-      >
-        <div>
-          <h2 className="stat-label">{t("admin.stats.occupancy")}</h2>
-          <p className="stat-value tabular-nums">
-            {stats.occupied_total} <span className="text-base font-medium">{tw("admin.stats.of", { total: stats.total_spots })}</span>
-          </p>
-        </div>
+        {/* بطاقة الإشغال الحي — حد جانبي سميك بلون بني */}
+        <section
+          className="stat-card flex flex-col justify-between gap-4"
+          style={{ borderInlineStart: "4px solid var(--color-brown)" }}
+        >
+          <div>
+            <h2 className="stat-label">{t("admin.stats.occupancy")}</h2>
+            <p className="stat-value tabular-nums">
+              {stats.occupied_total} <span className="text-base font-medium">{tw("admin.stats.of", { total: stats.total_spots })}</span>
+            </p>
+          </div>
 
-        <div className="flex flex-col gap-3">
-          <OccupancyBar
+          <div className="flex flex-col gap-3">
+            <OccupancyBar
+              label={t("admin.room.social")}
+              occupied={socialRow?.occupied ?? 0}
+              total={socialRow?.total ?? 0}
+            />
+            <OccupancyBar
+              label={t("admin.room.silent")}
+              occupied={silentRow?.occupied ?? 0}
+              total={silentRow?.total ?? 0}
+            />
+            <OccupancyBar
+              label={t("admin.room.smoking")}
+              occupied={smokingRow?.occupied ?? 0}
+              total={smokingRow?.total ?? 0}
+            />
+          </div>
+        </section>
+      </div>
+
+      {/* ساعات اليوم — قسم التقارير بالساعات */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <section className="stat-card flex flex-col justify-between gap-4">
+          <div>
+            <h2 className="stat-label">{t("admin.stats.billableHours")}</h2>
+            <p className="stat-value tabular-nums">
+              {stats.billed_hours_today}{" "}
+              <span className="text-xl font-semibold text-muted">{t("common.hourShort")}</span>
+            </p>
+            <p className="stat-sub">
+              {tw("admin.stats.endedSessions", { n: stats.ended_sessions_today })}
+            </p>
+          </div>
+        </section>
+
+        <section className="stat-card flex flex-col justify-between gap-4">
+          <div>
+            <h2 className="stat-label">{t("admin.stats.avgSession")}</h2>
+            <p className="stat-value text-3xl tabular-nums">
+              {durationHM(
+                stats.avg_billable_hours * 3600 * 1000,
+                t("common.hourShort"),
+                t("common.minuteShort")
+              )}
+            </p>
+            <p className="stat-sub">{t("admin.stats.avgSub")}</p>
+          </div>
+        </section>
+
+        <section
+          className="stat-card flex flex-col justify-between gap-4"
+          style={{ borderInlineStart: "4px solid var(--color-primary)" }}
+        >
+          <h2 className="stat-label">{t("admin.stats.hoursByRoom")}</h2>
+          <RoomHoursRow
             label={t("admin.room.social")}
-            occupied={socialRow?.occupied ?? 0}
-            total={socialRow?.total ?? 0}
+            value={stats.hours_by_room.social}
+            max={roomHoursMax}
           />
-          <OccupancyBar
+          <RoomHoursRow
             label={t("admin.room.silent")}
-            occupied={silentRow?.occupied ?? 0}
-            total={silentRow?.total ?? 0}
+            value={stats.hours_by_room.silent}
+            max={roomHoursMax}
           />
-          <OccupancyBar
+          <RoomHoursRow
             label={t("admin.room.smoking")}
-            occupied={smokingRow?.occupied ?? 0}
-            total={smokingRow?.total ?? 0}
+            value={stats.hours_by_room.smoking}
+            max={roomHoursMax}
           />
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
   );
 }

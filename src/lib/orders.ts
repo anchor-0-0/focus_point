@@ -55,6 +55,30 @@ export const ORIENTATION_LABELS: Record<PrintOrientation, string> = {
   landscape: "أفقي",
 };
 
+/**
+ * عدد الوحدات المُسعَّرة للطلب: كمية المشروبات، أو عدد نسخ الطباعة.
+ * الطلب بلا أي منهما = وحدة واحدة. أي قيمة غير صالحة تُعتبر وحدة.
+ */
+export function orderUnits(details: OrderDetails | null | undefined): number {
+  const d = details ?? {};
+  const raw =
+    typeof d.quantity === "number"
+      ? d.quantity
+      : typeof d.copies === "number"
+        ? d.copies
+        : 1;
+  const units = Math.trunc(raw);
+  return Number.isFinite(units) && units > 0 ? units : 1;
+}
+
+/** إجمالي الطلب = سعر الوحدة × عدد الوحدات. */
+export function orderTotal(
+  unitPrice: number,
+  details: OrderDetails | null | undefined
+): number {
+  return unitPrice * orderUnits(details);
+}
+
 export type OrderDetails = {
   note?: string;
   quantity?: number;

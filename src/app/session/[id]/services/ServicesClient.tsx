@@ -8,6 +8,7 @@ import { useToast } from "@/components/Toast";
 import { useLiveElapsed } from "@/hooks/useLiveElapsed";
 import { useSessionWatcher } from "@/hooks/useSessionWatcher";
 import { clearStoredActiveSessionId } from "@/lib/active-session";
+import { formatThousands } from "@/lib/money";
 import {
   MAX_FILE_BYTES,
   MAX_FILE_MB,
@@ -224,7 +225,7 @@ export function ServicesClient({
   }
 
   function formatPrice(price: number): string {
-    return price > 0 ? `${price} ${t("services.currency")}` : "";
+    return price > 0 ? `${formatThousands(price)} ${t("services.currency")}` : "";
   }
 
   function validateFile(next: File | null): boolean {

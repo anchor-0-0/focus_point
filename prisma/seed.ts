@@ -71,6 +71,15 @@ async function main() {
   await prisma.service.createMany({ data: services });
 
   // ============================================================
+  // الإعدادات: سعر الساعة الافتراضي 10,000 ل.س (قابل للتعديل من /admin/settings).
+  // ============================================================
+  await prisma.setting.upsert({
+    where: { key: "hourly_rate_syp" },
+    update: {},
+    create: { key: "hourly_rate_syp", value: "10000" },
+  });
+
+  // ============================================================
   // التقارير
   // ============================================================
   const chairsByGroup = await prisma.spot.groupBy({

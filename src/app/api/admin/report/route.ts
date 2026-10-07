@@ -55,7 +55,12 @@ export async function GET(req: NextRequest) {
 
     if (format === "xlsx") {
       const buf = await buildReportWorkbook(report);
-      const filename = `focus-point-report-${from}-to-${to}.xlsx`;
+      // اسم الملف يتضمن التاريخ: يوم واحد → focus-point-report-2026-10-05.xlsx،
+      // فترة → focus-point-report-2026-10-05-to-2026-10-07.xlsx.
+      const filename =
+        from === to
+          ? `focus-point-report-${from}.xlsx`
+          : `focus-point-report-${from}-to-${to}.xlsx`;
       return new Response(new Uint8Array(buf), {
         headers: {
           "Content-Type":

@@ -6,6 +6,7 @@ import { POLL_STANDARD_MS } from "@/lib/admin-poll";
 import { useToast } from "@/components/Toast";
 import { SkeletonLines } from "@/components/SkeletonLines";
 import { useI18n } from "@/components/LanguageProvider";
+import { formatThousands } from "@/lib/money";
 
 type Service = {
   id: string;
@@ -143,7 +144,7 @@ export function ServicesManager() {
                   <td className="font-medium text-foreground">{s.name}</td>
                   <td>{s.category ?? "—"}</td>
                   <td dir="ltr" className="tabular-nums">
-                    {s.price.toFixed(2)} {t("admin.currency")}
+                    {formatThousands(s.price)} {t("admin.currency")}
                   </td>
                   <td className="text-end">
                     <div className="flex justify-end gap-2">

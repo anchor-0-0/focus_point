@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { AdminNav, AdminNavCompact, LogoutIconButton } from "./AdminNav";
+import { NewOrdersWatcher } from "./NewOrdersWatcher";
 import { useI18n } from "@/components/LanguageProvider";
 
 // هيكل لوحة التحكم (شريط جانبي + هيدر + تنقل).
@@ -19,6 +20,8 @@ export function AdminChrome({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
+      {/* مراقب الطلبات الجديدة — يعمل في كل صفحات اللوحة */}
+      <NewOrdersWatcher />
       {/* الشريط الجانبي (سطح المكتب) */}
       <aside className="no-print hidden w-60 shrink-0 border-e border-border bg-surface lg:flex lg:flex-col">
         <div className="border-b border-border px-6 py-5">

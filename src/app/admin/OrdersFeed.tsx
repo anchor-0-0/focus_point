@@ -7,7 +7,9 @@ import { useToast } from "@/components/Toast";
 import { EmptyState } from "@/components/EmptyState";
 import { SkeletonLines } from "@/components/SkeletonLines";
 import { useI18n } from "@/components/LanguageProvider";
-import type { OrderDetails } from "@/lib/orders";
+import { formatThousands } from "@/lib/money";
+import { orderTotal, orderUnits, type OrderDetails } from "@/lib/orders";
+import { ordersSound } from "./NewOrdersWatcher";
 
 type OrderRow = {
   id: string;
@@ -20,19 +22,10 @@ type OrderRow = {
 };
 
 // ============================================================
-// تتبع دقيق بالمعرّف (وليست بالعدد): نُنبّه فقط عن الطلبات التي
-// لم نُنبّه عنها من قبل، وتظل المجموعة حيّة في نفس التبويب حتى لو
-// انتقل الأدمن بين صفحات الداشبورد ورجع — فلا يتكرر التنبيه لنفس
-// الطلب أبداً، بينما يُنبّه عن أي طلب جديد ورد أثناء غيابه.
+// عرض الطلبات المعلّقة. التنبيه (toast + صوت + نبض + إشعار متصفح)
+// مسؤول عنه الآن NewOrdersWatcher المركّب في هيكل اللوحة، فيعمل في
+// كل الصفحات بلا ازدواج هنا.
 // ============================================================
-const alertedOrderIds = new Set<string>();
-
-// حالة الكتم على مستوى التبويب (بدون localStorage لتجنب وجود وميض
-// هدرة) — تتحكم في تشغيل الجرس.
-let soundMuted = false;
-
-// أول دورة بحث = خط أساس: نعرّف المجموعة دون أي تنبيه.
-let baselineDone = false;
 
 export function OrdersFeed() {
   const { showToast } = useToast();
@@ -40,18 +33,18 @@ export function OrdersFeed() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pulsing, setPulsing] = useState(false);
-  const [mutedUi, setMutedUi] = useState(false);
+  const [mutedUi, setMutedUi] = useState(ordersSound.muted);
   // أول جلب: حتى لا "تومض" رسالة "لا توجد طلبات" قبل وصول أول بيانات.
   const [firstLoadDone, setFirstLoadDone] = useState(false);
   const inFlight = useRef(false);
   const audioCtxRef = useRef<AudioContext | null | undefined>(undefined);
+  const alertedOrderIds = useRef<Set<string>>(new Set());
+  const baselineDone = useRef(false);
 
-  // تهيئة سياق الصوت عند أول تفاعل حقيقي من الأدمن (نقرة/لمس/زر) —
-  // المتصفحات تمنع الصوت التلقائي قبل أول تفاعل، فهذا يجعل الجرس
-  // جاهزاً لحظة وصول الطلب الأول بعد أي نقرة على الداشبورد.
+  // تهيئة صوت الجرس عند أول تفاعل حقيقي (نقرة/لمس/زر).
   useEffect(() => {
     const prime = () => {
-      if (!audioCtxRef.current) {
+      if (audioCtxRef.current === undefined) {
         try {
           const Ctor: typeof AudioContext | undefined =
             window.AudioContext ??
@@ -72,17 +65,15 @@ export function OrdersFeed() {
     };
   }, []);
 
-  // نغمة قصيرة هادئة: نغمتان ناعمتان (E5 ثم A5) بأسلوب متلاشٍ سريع.
+  // نغمة قصيرة هادئة عند كتم解除 (نفس نغمة المراقب العام).
   function playChime() {
-    if (soundMuted) return;
+    if (ordersSound.muted) return;
     const ctx = audioCtxRef.current;
     if (!ctx) return;
     if (ctx.state === "suspended") void ctx.resume().catch(() => {});
     if (ctx.state !== "running") return;
-
     const t0 = ctx.currentTime + 0.02;
-    const notes = [659.25, 880.0];
-    notes.forEach((freq, i) => {
+    [659.25, 880.0].forEach((freq, i) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = "sine";
@@ -110,25 +101,18 @@ export function OrdersFeed() {
         setOrders(incoming);
         setError(null);
 
-        if (!baselineDone) {
-          // أول دورة: تعارف، بلا تنبيهات (لا ننفجر بأوامر قديمة موجودة).
-          for (const o of incoming) alertedOrderIds.add(o.id);
-          baselineDone = true;
+        // نبض محلي فقط (مرئي) — التنبيه والجرس للإشعار يتولاهما
+        // NewOrdersWatcher، فلا يتكرر الصوت أو الـ toast في هذه الصفحة.
+        if (!baselineDone.current) {
+          for (const o of incoming) alertedOrderIds.current.add(o.id);
+          baselineDone.current = true;
         } else {
-          // دورة لاحقة: تنبيه حقيقي للطلبات الجديدة فقط (بالمعرّف،
-          // لا بالعدد) — حتى لو زاد واحد ونقص واحد بقي كشفنا دقيقاً.
-          const fresh = incoming.filter((o) => !alertedOrderIds.has(o.id));
+          const fresh = incoming.filter(
+            (o) => !alertedOrderIds.current.has(o.id)
+          );
           if (fresh.length > 0) {
-            for (const o of fresh) alertedOrderIds.add(o.id);
+            for (const o of fresh) alertedOrderIds.current.add(o.id);
             setPulsing(true);
-            fresh.forEach((o) =>
-              showToast(
-                tw("admin.orders.newOrder", { student: o.student_name, service: o.service_name }),
-                "info",
-                4500
-              )
-            );
-            playChime();
           }
         }
         setFirstLoadDone(true);
@@ -140,7 +124,7 @@ export function OrdersFeed() {
     } finally {
       inFlight.current = false;
     }
-  }, [showToast, t, tw]);
+  }, [t]);
 
   usePolling(load, POLL_ORDERS_MS);
 
@@ -175,8 +159,9 @@ export function OrdersFeed() {
   }
 
   const toggleMute = () => {
-    soundMuted = !soundMuted;
-    setMutedUi(soundMuted);
+    ordersSound.muted = !ordersSound.muted;
+    setMutedUi(ordersSound.muted);
+    if (!ordersSound.muted) playChime();
   };
 
   async function markDone(orderId: string) {
@@ -308,7 +293,7 @@ export function OrdersFeed() {
                       {o.student_name} • {o.spot_label ?? "—"}
                     </p>
                   </div>
-                  <span className="price-chip">{o.price.toFixed(2)} {t("admin.currency")}</span>
+                  <span className="price-chip">{formatThousands(o.price)} {t("admin.currency")}</span>
                 </div>
 
                 {/* طلب طباعة: تفاصيل واضحة + زر تحميل الملف المرفوع */}
@@ -395,6 +380,23 @@ export function OrdersFeed() {
                         <div className="flex justify-between">
                           <dt>{t("admin.orders.quantity")}</dt>
                           <dd className="tabular-nums">{details.quantity}</dd>
+                        </div>
+                      ) : null}
+                      {details.copies ? (
+                        <div className="flex justify-between">
+                          <dt>{t("admin.col.qty")}</dt>
+                          <dd className="tabular-nums">{details.copies}</dd>
+                        </div>
+                      ) : null}
+                      {orderUnits(details) > 1 ? (
+                        <div className="flex justify-between">
+                          <dt>{t("admin.col.lineTotal")}</dt>
+                          <dd className="tabular-nums">
+                            {formatThousands(
+                              orderTotal(o.price, details)
+                            )}{" "}
+                            {t("admin.currency")}
+                          </dd>
                         </div>
                       ) : null}
                       {details.sugar ? (

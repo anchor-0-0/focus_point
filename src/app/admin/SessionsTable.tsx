@@ -7,6 +7,7 @@ import { useToast } from "@/components/Toast";
 import { EmptyState } from "@/components/EmptyState";
 import { SkeletonLines } from "@/components/SkeletonLines";
 import { seatLabel } from "@/lib/rooms";
+import { formatThousands } from "@/lib/money";
 import { useI18n } from "@/components/LanguageProvider";
 
 type SessionRow = {
@@ -16,6 +17,8 @@ type SessionRow = {
   spot_group_label: string | null;
   spot_seat_number: number | null;
   check_in: string;
+  billable_hours: number;
+  session_amount: number;
 };
 
 export function SessionsTable() {
@@ -101,6 +104,8 @@ export function SessionsTable() {
             <th>{t("admin.col.room")}</th>
             <th>{t("admin.col.seat")}</th>
             <th>{t("admin.col.duration")}</th>
+            <th className="text-end">{t("admin.col.billable")}</th>
+            <th className="text-end">{t("admin.col.projectedAmount")}</th>
             <th className="text-end">{t("admin.col.action")}</th>
           </tr>
         </thead>
@@ -122,6 +127,12 @@ export function SessionsTable() {
                 <td>{seatLabel(s.spot_group_label, s.spot_seat_number)}</td>
                 <td dir="ltr" className="tabular-nums">
                   {formatDuration(elapsed)}
+                </td>
+                <td className="text-end tabular-nums">
+                  {s.billable_hours} <span className="text-muted">{t("common.hourShort")}</span>
+                </td>
+                <td className="text-end tabular-nums">
+                  {formatThousands(s.session_amount)} <span className="text-muted">{t("admin.currency")}</span>
                 </td>
                 <td className="text-end">
                   <button

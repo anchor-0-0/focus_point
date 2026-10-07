@@ -12,6 +12,7 @@ const LINKS = [
   { href: "/admin/report", key: "admin.nav.report" },
   { href: "/admin/services", key: "admin.nav.services" },
   { href: "/admin/qr-code", key: "admin.nav.qr" },
+  { href: "/admin/settings", key: "admin.nav.settings" },
 ] as const;
 
 type NavKey = (typeof LINKS)[number]["key"];
