@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { AdminNav, AdminNavCompact, LogoutIconButton } from "./AdminNav";
+import { HospitalityQuickLogButton } from "./HospitalityQuickLog";
 import { NewOrdersWatcher } from "./NewOrdersWatcher";
 import { useI18n } from "@/components/LanguageProvider";
 
@@ -53,7 +54,10 @@ export function AdminChrome({ children }: { children: ReactNode }) {
             />
             <span className="text-xs text-muted">{t("admin.chrome.label")}</span>
           </div>
-          <LogoutIconButton />
+          <div className="flex items-center gap-1.5">
+            <HospitalityQuickLogButton compact />
+            <LogoutIconButton />
+          </div>
         </header>
 
         {/* تنقل أفقي للتابلت */}

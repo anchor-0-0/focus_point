@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useI18n } from "@/components/LanguageProvider";
+import { HospitalityQuickLogButton } from "./HospitalityQuickLog";
 
 const LINKS = [
   { href: "/admin", key: "admin.nav.overview" },
@@ -10,6 +11,7 @@ const LINKS = [
   { href: "/admin/sessions", key: "admin.nav.sessions" },
   { href: "/admin/orders", key: "admin.nav.orders" },
   { href: "/admin/report", key: "admin.nav.report" },
+  { href: "/admin/hospitality", key: "admin.nav.hospitality" },
   { href: "/admin/services", key: "admin.nav.services" },
   { href: "/admin/qr-code", key: "admin.nav.qr" },
   { href: "/admin/settings", key: "admin.nav.settings" },
@@ -80,7 +82,10 @@ export function AdminNav() {
           );
         })}
       </ul>
-      <LogoutButton />
+      <div className="flex flex-col gap-2">
+        <HospitalityQuickLogButton />
+        <LogoutButton />
+      </div>
     </nav>
   );
 }

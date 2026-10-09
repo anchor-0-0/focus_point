@@ -22,6 +22,8 @@ type HistoryRow = {
   session_amount: number;
   services_total: number;
   total: number;
+  discount_amount: number;
+  final_total: number;
 };
 
 type HistoryPayload = {
@@ -117,9 +119,11 @@ export function SessionsHistory() {
       acc.sessions += r.session_amount;
       acc.services += r.services_total;
       acc.total += r.total;
+      acc.discount += r.discount_amount;
+      acc.final += r.final_total;
       return acc;
     },
-    { billable: 0, sessions: 0, services: 0, total: 0 }
+    { billable: 0, sessions: 0, services: 0, total: 0, discount: 0, final: 0 }
   );
 
   return (
@@ -188,6 +192,8 @@ export function SessionsHistory() {
                 <th className="text-end">{t("admin.col.sessionAmount")}</th>
                 <th className="text-end">{t("admin.col.servicesTotal")}</th>
                 <th className="text-end">{t("admin.col.totalAmount")}</th>
+                <th className="text-end">{t("admin.col.discount")}</th>
+                <th className="text-end">{t("admin.col.finalAmount")}</th>
               </tr>
             </thead>
             <tbody>
@@ -217,6 +223,12 @@ export function SessionsHistory() {
                   <td className="text-end tabular-nums font-semibold text-foreground">
                     {fmtMoney(r.total)}
                   </td>
+                  <td className="text-end tabular-nums text-danger">
+                    {r.discount_amount > 0 ? `− ${fmtMoney(r.discount_amount)}` : "—"}
+                  </td>
+                  <td className="text-end tabular-nums font-semibold text-primary">
+                    {fmtMoney(r.final_total)}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -237,8 +249,14 @@ export function SessionsHistory() {
                 <td className="border-t-2 border-primary py-3 text-end tabular-nums font-bold text-foreground">
                   {fmtMoney(totals.services)}
                 </td>
-                <td className="border-t-2 border-primary py-3 text-end tabular-nums font-bold text-primary">
+                <td className="border-t-2 border-primary py-3 text-end tabular-nums font-bold text-foreground">
                   {fmtMoney(totals.total)}
+                </td>
+                <td className="border-t-2 border-primary py-3 text-end tabular-nums font-bold text-danger">
+                  {totals.discount > 0 ? `− ${fmtMoney(totals.discount)}` : "—"}
+                </td>
+                <td className="border-t-2 border-primary py-3 text-end tabular-nums font-bold text-primary">
+                  {fmtMoney(totals.final)}
                 </td>
               </tr>
             </tfoot>

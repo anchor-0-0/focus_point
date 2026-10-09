@@ -14,7 +14,11 @@ import { computeBilling } from "@/lib/billing";
 import { readHourlyRate } from "@/lib/settings";
 import { orderTotal, orderUnits, type OrderDetails } from "@/lib/orders";
 import { ClearActiveSession } from "@/components/ClearActiveSession";
-import { InvoiceModal } from "@/components/InvoiceModal";
+import {
+  InvoiceModal,
+  type InvoiceData,
+  type InvoiceDiscount,
+} from "@/components/InvoiceModal";
 
 export const dynamic = "force-dynamic";
 
@@ -87,21 +91,7 @@ export default async function EndedSessionPage({
 
   // قراءة الجلسة مع كل ما تحتاجه الفاتورة: الطالب، المكان، الحقائق المالية،
   // والطلبات المنفذة (done) فقط — الملغاة والمعلقة لا تدخل الفاتورة أبداً.
-  let invoice: {
-    guest: string;
-    phone: string | null;
-    place: string;
-    checkInText: string;
-    checkOutText: string;
-    issueDateText: string;
-    durationText: string;
-    billableHours: number;
-    hourlyRate: number;
-    sessionAmount: number;
-    services: { name: string; price: number; units: number; total: number }[];
-    servicesTotal: number;
-    total: number;
-  } | null = null;
+  let invoice: InvoiceData | null = null;
 
   let duration: string | null = null;
   let orderCount: number | null = null;
@@ -116,6 +106,12 @@ export default async function EndedSessionPage({
         billableHours: true,
         sessionAmount: true,
         hourlyRateSnapshot: true,
+        discountScope: true,
+        discountType: true,
+        discountValue: true,
+        discountAmount: true,
+        discountNote: true,
+        finalAmount: true,
         student: { select: { name: true, phone: true } },
         spot: { select: { room: true, seatGroup: true, seatNumber: true } },
         orders: {
@@ -166,6 +162,25 @@ export default async function EndedSessionPage({
         };
       });
       const servicesTotal = services.reduce((sum, s) => sum + s.total, 0);
+      const grossTotal = Math.round((sessionAmount + servicesTotal) * 100) / 100;
+
+      // الخصم المحفوظ لحظة الإنهاء (null = بلا خصم).
+      const discountAmount = session.discountAmount
+        ? Number(session.discountAmount)
+        : 0;
+      const discount =
+        session.discountScope &&
+        session.discountType &&
+        discountAmount > 0 &&
+        session.discountValue
+          ? {
+              scope: session.discountScope as InvoiceDiscount["scope"],
+              type: session.discountType as InvoiceDiscount["type"],
+              value: Number(session.discountValue),
+              amount: discountAmount,
+              note: session.discountNote,
+            }
+          : null;
 
       const place = `${roomName(session.spot.room, lang)} — ${placeLabel(
         session.spot.seatGroup,
@@ -185,7 +200,11 @@ export default async function EndedSessionPage({
         sessionAmount,
         services,
         servicesTotal,
-        total: sessionAmount + servicesTotal,
+        grossTotal,
+        discount,
+        total: session.finalAmount
+          ? Number(session.finalAmount)
+          : Math.round((grossTotal - discountAmount) * 100) / 100,
       };
     }
   } catch (err) {

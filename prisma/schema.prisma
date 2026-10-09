@@ -72,8 +72,19 @@ model Session {
   // حقول الفوترة — تُحفظ لحظة إنهاء الجلسة داخل نفس الـ transaction
   // (لا تُمتلأ عند الجلسات النشطة ولا للجلسات المنتهية قبل هذا التحديث).
   billableHours      Int?     @map("billable_hours") // الساعات المحتسبة للأجر (حد أدنى ساعة)
-  sessionAmount      Decimal? @map("session_amount") @db.Decimal(12, 2) // المبلغ النهائي = ساعات × سعر
+  sessionAmount      Decimal? @map("session_amount") @db.Decimal(12, 2) // المبلغ قبل الخصم = ساعات × سعر
   hourlyRateSnapshot Decimal? @map("hourly_rate_snapshot") @db.Decimal(12, 2) // سعر الساعة لحظة الإنهاء
+
+  // حقول الخصم الاختياري — تُملأ لحظة إنهاء الجلسة داخل نفس الـ transaction
+  // (null = بلا خصم؛ والجلسات المنتهية قبل الميزة تبقى null).
+  // sessionAmount يبقى "المبلغ قبل الخصم" (رسوم الساعات قبل الخصم)، و
+  // final_amount = (رسوم الساعات + مجموع الخدمات) − discount_amount.
+  discountScope  String?  @map("discount_scope") // 'total' | 'hours' | 'orders' — CHECK في DB
+  discountType   String?  @map("discount_type") // 'percent' | 'fixed' | 'free_hours' — CHECK في DB
+  discountValue  Decimal? @map("discount_value") @db.Decimal(12, 2) // القيمة المُدخلة (نسبة/مبلغ/ساعات)
+  discountAmount Decimal? @map("discount_amount") @db.Decimal(12, 2) // القيمة الفعلية المخصومة بالليرة
+  discountNote   String?  @map("discount_note") // سبب الخصم (اختياري)
+  finalAmount    Decimal? @map("final_amount") @db.Decimal(12, 2) // المبلغ النهائي بعد الخصم
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   spot    Spot    @relation(fields: [spotId], references: [id], onDelete: Restrict, onUpdate: Cascade)
@@ -91,8 +102,46 @@ model Service {
   category String? // تصنيف اختياري (طباعة/مشروبات/...)
   price    Decimal @default(0) @db.Decimal // يستخدم لاحقاً لحساب الأرباح
   orders   Order[]
+  hospitalityLogs HospitalityLog[]
 
   @@map("services")
+}
+
+// ============================================================
+// الضيافة — أسماء محفوظة (للضيوف أو الإدارة) لتُعاد استخدامها
+// لا يدخل أي شيء من هذا الجدول بالإيرادات أبداً (مقياس إحصائي فقط).
+// ============================================================
+model HospitalityRecipient {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  type      String   @default("guest") // 'guest' | 'management' — CHECK في DB
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  logs      HospitalityLog[]
+
+  @@map("hospitality_recipients")
+}
+
+// ============================================================
+// سجل الضيافة — كل تسجيل (صنف + كمية) مقدَّم مجاناً لضيف أو للإدارة.
+// unit_price_snapshot = سعر وقت التسجيل للمرجع فقط (لا يُحتسب إيراداً).
+// ============================================================
+model HospitalityLog {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  serviceId  String   @map("service_id") @db.Uuid
+  recipientType  String  @default("guest") @map("recipient_type") // 'guest' | 'management' — CHECK في DB
+  recipientId    String? @map("recipient_id") @db.Uuid // اختياري — الاسم المحفوظ
+  guestLabel     String? @map("guest_label") // نص حر للاسم/الجهة (للضيوف العابرين)
+  quantity       Int     @default(1)
+  guestsCount    Int     @default(1) @map("guests_count") // عدد الأشخاص بهذا التسجيل
+  note           String?
+  unitPriceSnapshot Decimal @default(0) @map("unit_price_snapshot") @db.Decimal(12, 2)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  service   Service            @relation(fields: [serviceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  recipient HospitalityRecipient? @relation(fields: [recipientId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@map("hospitality_logs")
 }
 
 // ============================================================

@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePolling, formatDuration } from "@/lib/admin-hooks";
 import { POLL_STANDARD_MS } from "@/lib/admin-poll";
-import { useToast } from "@/components/Toast";
 import { EmptyState } from "@/components/EmptyState";
 import { SkeletonLines } from "@/components/SkeletonLines";
+import { EndSessionModal } from "@/components/EndSessionModal";
 import { seatLabel } from "@/lib/rooms";
 import { formatThousands } from "@/lib/money";
 import { useI18n } from "@/components/LanguageProvider";
@@ -22,7 +22,6 @@ type SessionRow = {
 };
 
 export function SessionsTable() {
-  const { showToast } = useToast();
   const { t } = useI18n();
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +32,9 @@ export function SessionsTable() {
   // لحظة الاقتراع الأخيرة — نستخدمها لحساب الوقت المنقضي حياً.
   // "الآن" تأتي من عدّاد داخلي (state) حتى لا نُنادي Date.now() أثناء الرسم.
   const [nowMs, setNowMs] = useState(0);
+
+  // الجلسة المحددة للإنهاء — تُفتح نافذة المعاينة/الخصم بدل الإنهاء المباشر.
+  const [endId, setEndId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (inFlight.current) return;
@@ -64,27 +66,6 @@ export function SessionsTable() {
     const id = setInterval(() => setNowMs(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
-
-  async function endSession(id: string) {
-    // Idempotent: حتى لو ضُغط الزر مرتين لا يحدث خطأ.
-    try {
-      const res = await fetch("/api/admin/end-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: id }),
-      });
-      if (res.ok) {
-        await load();
-        showToast(t("admin.sessions.endedT"), "success");
-      } else {
-        const data = await res.json().catch(() => null);
-        showToast(data?.error ?? t("admin.sessions.endFail"), "error");
-      }
-    } catch {
-      setError(t("admin.sessions.endFail"));
-      showToast(t("admin.sessions.endFail"), "error");
-    }
-  }
 
   if (error) return <p className="text-sm text-danger">{error}</p>;
 
@@ -138,7 +119,7 @@ export function SessionsTable() {
                   <button
                     type="button"
                     className="btn btn-danger px-4 py-2 text-sm"
-                    onClick={() => endSession(s.id)}
+                    onClick={() => setEndId(s.id)}
                   >
                     {t("admin.sessions.end")}
                   </button>
@@ -148,6 +129,14 @@ export function SessionsTable() {
           })}
         </tbody>
       </table>
+
+      {endId && (
+        <EndSessionModal
+          sessionId={endId}
+          onClose={() => setEndId(null)}
+          onEnded={() => load()}
+        />
+      )}
     </div>
   );
 }

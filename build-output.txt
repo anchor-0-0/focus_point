@@ -1,0 +1,90 @@
+
+> focus-point@0.1.0 build
+> next build --webpack
+
+▲ Next.js 16.3.4 (webpack)
+- Environments: .env.local
+⚠ Attempted to load @next/swc-win32-x64-msvc, but an error occurred: \\?\C:\Users\Rebo\Desktop\StudyZone\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node is not a valid Win32 application.
+\\?\C:\Users\Rebo\Desktop\StudyZone\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node
+⚠ Warning: Next.js ignored package-lock.json in C:\Users\Rebo because it is outside the current Git repository (C:\Users\Rebo\Desktop\StudyZone).
+ To use this directory, set `outputFileTracingRoot` in your Next.js config.
+
+✓ Running next.config.ts took 680ms
+  Skipping creating a lockfile at C:\Users\Rebo\Desktop\StudyZone\.next\lock because we're using WASM bindings
+
+  Creating an optimized production build ...
+⚠ Attempted to load @next/swc-win32-x64-msvc, but an error occurred: \\?\C:\Users\Rebo\Desktop\StudyZone\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node is not a valid Win32 application.
+\\?\C:\Users\Rebo\Desktop\StudyZone\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node
+⚠ Attempted to load @next/swc-win32-x64-msvc, but an error occurred: \\?\C:\Users\Rebo\Desktop\StudyZone\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node is not a valid Win32 application.
+\\?\C:\Users\Rebo\Desktop\StudyZone\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node
+⚠ Attempted to load @next/swc-win32-x64-msvc, but an error occurred: \\?\C:\Users\Rebo\Desktop\StudyZone\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node is not a valid Win32 application.
+\\?\C:\Users\Rebo\Desktop\StudyZone\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node
+✓ Compiled successfully in 41s
+  Running TypeScript ...
+  Finished TypeScript in 10.3s ...
+  Collecting page data using 3 workers ...
+⚠ Attempted to load @next/swc-win32-x64-msvc, but an error occurred: \\?\C:\Users\Rebo\Desktop\StudyZone\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node is not a valid Win32 application.
+\\?\C:\Users\Rebo\Desktop\StudyZone\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node
+⚠ Attempted to load @next/swc-win32-x64-msvc, but an error occurred: \\?\C:\Users\Rebo\Desktop\StudyZone\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node is not a valid Win32 application.
+\\?\C:\Users\Rebo\Desktop\StudyZone\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node
+⚠ Attempted to load @next/swc-win32-x64-msvc, but an error occurred: \\?\C:\Users\Rebo\Desktop\StudyZone\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node is not a valid Win32 application.
+\\?\C:\Users\Rebo\Desktop\StudyZone\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node
+◇ injected env (0) from .env.local // tip: ◈ secrets for agents [www.dotenvx.com]
+◇ injected env (0) from .env.local // tip: ⌘ override existing { override: true }
+◇ injected env (0) from .env.local // tip: ⌘ enable debugging { debug: true }
+  Generating static pages using 3 workers (0/16) ...
+  Generating static pages using 3 workers (4/16) 
+  Generating static pages using 3 workers (8/16) 
+  Generating static pages using 3 workers (12/16) 
+✓ Generating static pages using 3 workers (16/16) in 1838ms
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /admin
+├ ƒ /admin/hospitality
+├ ƒ /admin/login
+├ ƒ /admin/orders
+├ ƒ /admin/qr-code
+├ ƒ /admin/report
+├ ƒ /admin/services
+├ ƒ /admin/sessions
+├ ƒ /admin/settings
+├ ƒ /admin/spaces
+├ ƒ /api/admin/end-session
+├ ƒ /api/admin/files/[name]
+├ ƒ /api/admin/files/cleanup
+├ ƒ /api/admin/hospitality
+├ ƒ /api/admin/hospitality/recipients
+├ ƒ /api/admin/login
+├ ƒ /api/admin/logout
+├ ƒ /api/admin/orders
+├ ƒ /api/admin/report
+├ ƒ /api/admin/services
+├ ƒ /api/admin/services/[id]
+├ ƒ /api/admin/sessions
+├ ƒ /api/admin/sessions/[id]
+├ ƒ /api/admin/sessions/history
+├ ƒ /api/admin/settings
+├ ƒ /api/admin/spaces
+├ ƒ /api/admin/stats
+├ ƒ /api/assign-chair
+├ ƒ /api/checkin
+├ ƒ /api/health
+├ ƒ /api/orders
+├ ƒ /api/orders/print
+├ ƒ /api/server-info
+├ ƒ /api/session/[id]/status
+├ ƒ /checkin
+├ ƒ /checkin/room
+├ ○ /icon.svg
+├ ƒ /session/[id]
+├ ƒ /session/[id]/ended
+└ ƒ /session/[id]/services
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useToast } from "@/components/Toast";
 import { useI18n } from "@/components/LanguageProvider";
+import { EndSessionModal } from "@/components/EndSessionModal";
 import { formatDuration, usePolling } from "@/lib/admin-hooks";
 import { seatLabel } from "@/lib/rooms";
 
@@ -57,14 +57,12 @@ export function SessionDetailPanel({
   onEnded: (sessionId: string) => void;
 }) {
   const { t } = useI18n();
-  const { showToast } = useToast();
   const [detail, setDetail] = useState<Detail | null>(null);
   const [error, setError] = useState<string | null>(null);
   // "الآن" المنقّحة با��خادم + نبضة كل ثانية (لا Date.now أثناء التصيير).
   const [now, setNow] = useState(0);
   const skewRef = useRef(0);
-  const [confirming, setConfirming] = useState(false);
-  const [ending, setEnding] = useState(false);
+  const [showEnd, setShowEnd] = useState(false);
   const inFlight = useRef(false);
   const closeRef = useRef<HTMLButtonElement>(null);
 
@@ -108,10 +106,11 @@ export function SessionDetailPanel({
     return () => clearInterval(beat);
   }, []);
 
-  // Escape للإغلاق + قفل تمرير الصفحة + تركيز زر الإغلاق.
+  // Escape للإغلاق — يتوقف إذا كانت نافذة إنهاء الجلسة مفتوحة فوق اللوحة
+  // (نافذة الإنهاء توقف انتشار مفتاح Escape قبل أن يصل إلى مستمع المستند).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && !showEnd) onClose();
     };
     document.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
@@ -121,30 +120,7 @@ export function SessionDetailPanel({
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };
-  }, [onClose]);
-
-  async function endSession() {
-    setEnding(true);
-    try {
-      const res = await fetch("/api/admin/end-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: sessionId }),
-      });
-      if (res.ok) {
-        showToast(t("admin.sessions.endedT"), "success");
-        onEnded(sessionId);
-        onClose();
-      } else {
-        const data = await res.json().catch(() => null);
-        showToast(data?.error ?? t("admin.sessions.endFail"), "error");
-      }
-    } catch {
-      showToast(t("admin.sessions.endFail"), "error");
-    } finally {
-      setEnding(false);
-    }
-  }
+  }, [onClose, showEnd]);
 
   const elapsed = detail
     ? now - new Date(detail.check_in).getTime()
@@ -270,35 +246,26 @@ export function SessionDetailPanel({
             </div>
 
             <div className="session-panel-actions">
-              {confirming ? (
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="btn btn-danger px-4 py-2 text-sm"
-                    onClick={endSession}
-                    disabled={ending}
-                  >
-                    {ending ? t("common.loading") : t("admin.session.confirmEnd")}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-ghost px-4 py-2 text-sm"
-                    onClick={() => setConfirming(false)}
-                  >
-                    {t("common.cancel")}
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  className="btn btn-danger px-4 py-2 text-sm"
-                  onClick={() => setConfirming(true)}
-                >
-                  {t("admin.sessions.end")}
-                </button>
-              )}
+              <button
+                type="button"
+                className="btn btn-danger px-4 py-2 text-sm"
+                onClick={() => setShowEnd(true)}
+              >
+                {t("admin.sessions.end")}
+              </button>
             </div>
           </>
+        )}
+
+        {showEnd && (
+          <EndSessionModal
+            sessionId={sessionId}
+            onClose={() => setShowEnd(false)}
+            onEnded={(id) => {
+              onEnded(id);
+              onClose();
+            }}
+          />
         )}
       </div>
     </div>,

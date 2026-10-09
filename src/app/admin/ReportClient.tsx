@@ -174,8 +174,17 @@ export function ReportClient({ initial }: { initial: ReportData }) {
             />
             <SummaryCard
               label={t("admin.report.revenueCard")}
-              value={fmtMoney(data.summary.done_revenue)}
-              sub={tw("admin.report.revenueSub", { n: data.summary.done_count })}
+              value={fmtMoney(data.summary.revenue)}
+              sub={
+                data.summary.discounts_total > 0
+                  ? `${t("admin.report.revenueSubFull")} • ${t("admin.report.discountsCard")}: −${fmtMoney(data.summary.discounts_total)}`
+                  : t("admin.report.revenueSubFull")
+              }
+            />
+            <SummaryCard
+              label={t("admin.report.discountsCard")}
+              value={fmtMoney(data.summary.discounts_total)}
+              sub={t("admin.report.discountsSub")}
             />
             <SummaryCard
               label={t("admin.report.servicesCard")}

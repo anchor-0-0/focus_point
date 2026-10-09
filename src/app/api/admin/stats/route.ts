@@ -60,6 +60,22 @@ export async function GET() {
     const revenue_sessions = Number(sessionsRevenueRows[0]?.total ?? 0);
     const billedSessionsCount = Number(sessionsRevenueRows[0]?.count ?? 0);
 
+    // خصومات اليوم (للسجلات الجلسات المنتهية اليوم): مجموع discount_amount.
+    // الإيراد الصافي = الخدمات + رسوم الجلسات − الخصومات (يتطابق هيكرياً
+    // مع final_amount لكل جلسة: final = (session_amount + done services) − discount).
+    const discountsRows =
+      await prisma.$queryRaw<{ total: string | null }[]>`
+        select coalesce(sum(s.discount_amount), 0) as total
+        from public.sessions s
+        where s.status = 'ended'
+          and s.discount_amount is not null
+          and s.check_out >= (
+            date_trunc('day', now() at time zone 'Asia/Damascus')
+            at time zone 'Asia/Damascus'
+          )
+      `;
+    const discounts_total = Number(discountsRows[0]?.total ?? 0);
+
     // ساعات اليوم المحتسبة + عدد الجلسات المنتهية + التوزيع حسب القاعة.
     // (billable_hours قد يكون null لجلسات منتهية قبل ميزة الفوترة — تُحسب صفراً).
     const hoursRows =
@@ -113,9 +129,10 @@ export async function GET() {
 
     return NextResponse.json({
       ok: true,
-      revenue: revenue_services + revenue_sessions,
+      revenue: Math.round((revenue_services + revenue_sessions - discounts_total) * 100) / 100,
       revenue_services,
       revenue_sessions,
+      discounts_total,
       done_count: doneCount,
       billed_sessions: billedSessionsCount,
       billed_hours_today: billedHoursToday,

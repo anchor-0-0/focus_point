@@ -85,6 +85,12 @@ export async function GET(req: NextRequest) {
         0
       );
 
+      const grossTotal = sessionAmount + servicesTotal;
+      const discountAmount = s.discountAmount ? Number(s.discountAmount) : 0;
+      const finalTotal = s.finalAmount
+        ? Number(s.finalAmount)
+        : Math.round((grossTotal - discountAmount) * 100) / 100;
+
       return {
         session_id: s.id,
         student_name: s.student.name,
@@ -97,7 +103,9 @@ export async function GET(req: NextRequest) {
         billable_hours: billableHours,
         session_amount: sessionAmount,
         services_total: servicesTotal,
-        total: sessionAmount + servicesTotal,
+        total: grossTotal,
+        discount_amount: discountAmount,
+        final_total: finalTotal,
       };
     });
 

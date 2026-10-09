@@ -19,6 +19,7 @@ type Stats = {
   revenue: number;
   revenue_services: number;
   revenue_sessions: number;
+  discounts_total: number;
   done_count: number;
   billed_hours_today: number;
   ended_sessions_today: number;
@@ -92,11 +93,25 @@ export function DashboardStats() {
               {formatThousands(stats.revenue)} <span className="text-base font-medium text-white/85">{t("admin.currency")}</span>
             </p>
             <p className="stat-sub">
-              {tw("admin.stats.revenueBreakdown", {
-                s: `${formatThousands(stats.revenue_sessions)} ${t("admin.currency")}`,
-                o: `${formatThousands(stats.revenue_services)} ${t("admin.currency")}`,
-              })}
+              {stats.discounts_total > 0
+                ? tw("admin.stats.revenueBreakdownDisc", {
+                    s: `${formatThousands(stats.revenue_sessions)} ${t("admin.currency")}`,
+                    o: `${formatThousands(stats.revenue_services)} ${t("admin.currency")}`,
+                    d: `${formatThousands(stats.discounts_total)} ${t("admin.currency")}`,
+                  })
+                : tw("admin.stats.revenueBreakdown", {
+                    s: `${formatThousands(stats.revenue_sessions)} ${t("admin.currency")}`,
+                    o: `${formatThousands(stats.revenue_services)} ${t("admin.currency")}`,
+                  })}
             </p>
+            {stats.discounts_total > 0 && (
+              <p className="stat-sub">
+                {t("admin.stats.discounts")}:{" "}
+                <span className="tabular-nums">
+                  {formatThousands(stats.discounts_total)} {t("admin.currency")}
+                </span>
+              </p>
+            )}
             <p className="stat-sub">
               {tw("admin.stats.done", { n: stats.done_count })}{" "}
               {refreshing && `• ${t("admin.stats.refreshing")}`}

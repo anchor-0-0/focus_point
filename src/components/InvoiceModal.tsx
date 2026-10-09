@@ -3,9 +3,18 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/components/LanguageProvider";
 import { formatThousands } from "@/lib/money";
+import type { DiscountScope, DiscountType } from "@/lib/discount";
 
 // بيانات الفاتورة — تُبنى في صفحة النهاية (خادومية) وتُمرَّر هنا للعرض
 // داخل النافذة المنبثقة ولميزة الطباعة.
+export type InvoiceDiscount = {
+  scope: DiscountScope;
+  type: DiscountType;
+  value: number;
+  amount: number;
+  note: string | null;
+};
+
 export type InvoiceData = {
   guest: string;
   phone: string | null;
@@ -24,6 +33,11 @@ export type InvoiceData = {
     total: number;
   }[];
   servicesTotal: number;
+  /** المجموع قبل الخصم (رسوم الساعات + الخدمات). */
+  grossTotal: number;
+  /** الخصم المطبّق — null بلا خصم. */
+  discount: InvoiceDiscount | null;
+  /** المبلغ النهائي بعد الخصم. */
   total: number;
 };
 
@@ -213,8 +227,50 @@ export function InvoiceModal({ invoice }: { invoice: InvoiceData }) {
                 )}
               </div>
 
+              {/* الخصم — يظهر فقط إن وُجد (بين الخدمات والإجمالي) */}
+              {invoice.discount && (
+                <>
+                  <div className="invoice-subrule" />
+                  <div className="invoice-discount">
+                    <h3 className="invoice-section-label">
+                      {t("ended.invoice.discount")}
+                    </h3>
+                    <dl className="invoice-rows">
+                      <div className="invoice-row invoice-row-discount">
+                        <dt>{t("ended.invoice.discount")}</dt>
+                        <dd className="tabular-nums font-semibold text-danger" dir="ltr">
+                          − {formatThousands(invoice.discount.amount)} {currency}
+                          <span className="invoice-discount-meta" dir="rtl">
+                            {" ("}
+                            {t(`admin.end.scope.${invoice.discount.scope}`)}
+                            {" — "}
+                            {t(`admin.end.type.${invoice.discount.type}`)}
+                            {invoice.discount.type === "percent"
+                              ? ` · ${formatThousands(invoice.discount.value)}${t("admin.end.valueSuffix.percent")}`
+                              : ""}
+                            {")"}
+                          </span>
+                        </dd>
+                      </div>
+                      {invoice.discount.note && (
+                        <div className="invoice-row">
+                          <dt>{t("ended.invoice.discountNote")}</dt>
+                          <dd className="text-foreground">{invoice.discount.note}</dd>
+                        </div>
+                      )}
+                    </dl>
+                  </div>
+                </>
+              )}
+
               {/* الإجمالي المستحق — أكبر عنصر بالفاتورة */}
               <div className="invoice-sheet-total">
+                {invoice.discount && (
+                  <span className="invoice-total-before tabular-nums" dir="ltr">
+                    {t("ended.invoice.discountBefore")}:{" "}
+                    {formatThousands(invoice.grossTotal)} {currency}
+                  </span>
+                )}
                 <span className="invoice-total-label">
                   {t("ended.invoice.total")}
                 </span>
