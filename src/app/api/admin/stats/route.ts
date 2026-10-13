@@ -11,70 +11,53 @@ export async function GET() {
   if (denied) return denied;
 
   try {
-    // إيرادات اليوم (الجزء الأول — الخدمات): مجموع (سعر الوحدة × عدد
-    // الوحدات) لطلبات status='done' أُنشئت "اليوم" بمنطقة المستخدم
-    // (Asia/Damascus). الوحدات = quantity (المشروبات) أو copies (الطباعة)
-    // — ومن لا يحمل details يُحسب له وحدة واحدة.
-    // ملاحظة: الأزمنة مخزنة في القاعدة بـ UTC (انظر src/lib/prisma.ts) —
-    // فنحسب بداية اليوم بمنطقة المستخدم ثم نقارن بالطابع المطلق.
-    const servicesRevenueRows =
-      await prisma.$queryRaw<{ total: string | null; count: bigint }[]>`
+    // إيرادات اليوم — تُقرأ حصراً من لقطات الجلسات المنتهية اليوم (حسب
+    // check_out بتوقيت دمشق):
+    //   - رسوم الساعات = مجموع session_amount
+    //   - خدمات الجلسة = مجموع orders_amount (لقطة لحظة الإنهاء)
+    //   - الخصم = مجموع discount_amount
+    // والإيراد = sessions + services − discounts، أي مجموع final_amount.
+    // لا يدخل جدول orders في أي رقم إيراد إطلاقاً (pending أو done): خدمات
+    // الجلسة لا تُحتسب إلا بعد إنهاء الجلسة وبلقطة ثابتة.
+    // ملاحظة: الأزمنة مخزنة كـ timestamptz؛ نعقد حدّ اليوم بتوقيت دمشق.
+    const revenueRows =
+      await prisma.$queryRaw<
+        {
+          sessions: string | null;
+          services: string | null;
+          discounts: string | null;
+          sessions_count: bigint;
+        }[]
+      >`
         select
-          coalesce(sum(
-            s.price *
-            case
-              when (o.details->>'quantity') ~ '^[0-9]+$'
-                then (o.details->>'quantity')::int
-              when (o.details->>'copies') ~ '^[0-9]+$'
-                then (o.details->>'copies')::int
-              else 1
-            end
-          ), 0) as total,
-          count(*) as count
+          coalesce(sum(s.session_amount), 0) as sessions,
+          coalesce(sum(s.orders_amount), 0) as services,
+          coalesce(sum(s.discount_amount), 0) as discounts,
+          count(*) filter (where s.session_amount > 0) as sessions_count
+        from public.sessions s
+        where s.status = 'ended'
+          and s.check_out >= (
+            date_trunc('day', now() at time zone 'Asia/Damascus')
+            at time zone 'Asia/Damascus'
+          )
+      `;
+    const revenue_sessions = Number(revenueRows[0]?.sessions ?? 0);
+    const revenue_services = Number(revenueRows[0]?.services ?? 0);
+    const discounts_total = Number(revenueRows[0]?.discounts ?? 0);
+    const billedSessionsCount = Number(revenueRows[0]?.sessions_count ?? 0);
+
+    // عدد الطلبات المكتملة اليوم (مؤشر نشاط فقط — لا يدخل بالإيراد).
+    const doneOrdersRows =
+      await prisma.$queryRaw<{ count: bigint }[]>`
+        select count(*) as count
         from public.orders o
-        join public.services s on s.id = o.service_id
         where o.status = 'done'
           and o.created_at >= (
             date_trunc('day', now() at time zone 'Asia/Damascus')
             at time zone 'Asia/Damascus'
           )
       `;
-    const revenue_services = Number(servicesRevenueRows[0]?.total ?? 0);
-    const doneCount = Number(servicesRevenueRows[0]?.count ?? 0);
-
-    // إيرادات اليوم (الجزء الثاني — رسوم الجلسات): مجموع (session_amount)
-    // للجلسات المنتهية اليوم. الجلسات القديمة (قبل ميزة الفوترة) بلا مبلغ
-    // تُحسب صفراً ولا تتحمّل علامة فارقة.
-    const sessionsRevenueRows =
-      await prisma.$queryRaw<{ total: string | null; count: bigint }[]>`
-        select
-          coalesce(sum(s.session_amount), 0) as total,
-          count(*) filter (where s.session_amount > 0) as count
-        from public.sessions s
-        where s.status = 'ended'
-          and s.check_out >= (
-            date_trunc('day', now() at time zone 'Asia/Damascus')
-            at time zone 'Asia/Damascus'
-          )
-      `;
-    const revenue_sessions = Number(sessionsRevenueRows[0]?.total ?? 0);
-    const billedSessionsCount = Number(sessionsRevenueRows[0]?.count ?? 0);
-
-    // خصومات اليوم (للسجلات الجلسات المنتهية اليوم): مجموع discount_amount.
-    // الإيراد الصافي = الخدمات + رسوم الجلسات − الخصومات (يتطابق هيكرياً
-    // مع final_amount لكل جلسة: final = (session_amount + done services) − discount).
-    const discountsRows =
-      await prisma.$queryRaw<{ total: string | null }[]>`
-        select coalesce(sum(s.discount_amount), 0) as total
-        from public.sessions s
-        where s.status = 'ended'
-          and s.discount_amount is not null
-          and s.check_out >= (
-            date_trunc('day', now() at time zone 'Asia/Damascus')
-            at time zone 'Asia/Damascus'
-          )
-      `;
-    const discounts_total = Number(discountsRows[0]?.total ?? 0);
+    const doneCount = Number(doneOrdersRows[0]?.count ?? 0);
 
     // ساعات اليوم المحتسبة + عدد الجلسات المنتهية + التوزيع حسب القاعة.
     // (billable_hours قد يكون null لجلسات منتهية قبل ميزة الفوترة — تُحسب صفراً).

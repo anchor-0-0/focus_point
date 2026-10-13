@@ -75,15 +75,20 @@ export async function GET(req: NextRequest) {
         sessionAmount = billing.amount;
       }
 
-      const servicesTotal = s.orders.reduce(
-        (sum, o) =>
-          sum +
-          orderTotal(
-            Number(o.service.price),
-            o.details as OrderDetails | null
-          ),
-        0
-      );
+      // حصة الخدمات: لقطة لحظة الإنهاء إن وُجدت (المصدر المعتمد)، وإلا
+      // نحسبها من الطلبات المنجزة للجلسات القديمة قبل إضافة اللقطة.
+      const servicesTotal =
+        s.ordersAmount != null
+          ? Number(s.ordersAmount)
+          : s.orders.reduce(
+              (sum, o) =>
+                sum +
+                orderTotal(
+                  Number(o.service.price),
+                  o.details as OrderDetails | null
+                ),
+              0
+            );
 
       const grossTotal = sessionAmount + servicesTotal;
       const discountAmount = s.discountAmount ? Number(s.discountAmount) : 0;

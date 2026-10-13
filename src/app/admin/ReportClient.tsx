@@ -279,7 +279,7 @@ export function ReportClient({ initial }: { initial: ReportData }) {
                     <th>{t("admin.col.service")}</th>
                     <th>{t("admin.col.orders")}</th>
                     <th>{t("admin.col.doneCount")}</th>
-                    <th>{t("admin.col.revenue")}</th>
+                    <th>{t("admin.report.servicesValueRef")}</th>
                   </tr>
                 </thead>
                 <tbody>

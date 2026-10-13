@@ -114,11 +114,11 @@ export type ReportSession = {
   check_out: string | null;
   duration_sec: number;
   status: string;
-  /** الساعات المحتسبة للجلسة (للجلسات النشطة تُحسب الآن تقديرياً). */
+  /** الساعات المحتسبة للجلسة (من لقطة الإنهاء، أو تُحسب إن غابت). */
   billable_hours: number;
-  /** مبلغ الجلسة = ساعات × سعر الساعة (لقطة أو حساب الآن) — قبل الخصم. */
+  /** مبلغ الجلسة = ساعات × سعر الساعة (لقطة) — قبل الخصم. */
   session_amount: number;
-  /** مجموع الخدمات المنفذة (done) في الجلسة. */
+  /** خدمات الجلسة = لقطة orders_amount وقت الإنهاء (أو تُحسب إن غابت). */
   services_total: number;
   /** المبلغ الكلي قبل الخصم = مبلغ الجلسة + الخدمات. */
   total: number;
@@ -177,15 +177,17 @@ export type ReportData = {
     done_count: number;
     pending_count: number;
     cancelled_count: number;
+    /** قيمة الطلبات المنفّذة في الفترة (مرجعي — لا تُحتسب إيراداً). */
     done_revenue: number;
-    /** رسوم الجلسات المنتهية (قبل الخصم). */
+    /** رسوم الجلسات المنتهية (قبل الخصم) = مجموع session_amount. */
     sessions_revenue: number;
+    /** خدمات الجلسات المنتهية (قبل الخصم) = مجموع orders_amount اللقطة. */
+    services_revenue: number;
     /** إجمالي الخصومات الممنوحة في الفترة (للسجلات المنتهية). */
     discounts_total: number;
     /**
-     * إيرادات الفترة الموحّد بعد الخصم:
-     * done_revenue + sessions_revenue − discounts_total.
-     * (يتطابق هيكرياً مع final_amount لكل جلسة.)
+     * إيرادات الفترة الموحّد بعد الخصم (مجموع final_amount للجلسات المنتهية):
+     * sessions_revenue + services_revenue − discounts_total.
      */
     revenue: number;
     ended_sessions: number;
@@ -248,7 +250,7 @@ export async function fetchReport(
   const hourlyRate = await readHourlyRate(prisma);
   const [sessions, orders, hospitalityLogs] = await Promise.all([
     prisma.session.findMany({
-      where: { checkIn: { gte: fromDate, lt: toDate } },
+      where: { status: "ended", checkOut: { gte: fromDate, lt: toDate } },
       include: {
         student: { select: { id: true, name: true, phone: true } },
         spot: { select: { room: true, groupLabel: true, seatNumber: true } },
@@ -257,7 +259,7 @@ export async function fetchReport(
           select: { details: true, service: { select: { price: true } } },
         },
       },
-      orderBy: { checkIn: "asc" },
+      orderBy: { checkOut: "asc" },
     }),
     prisma.order.findMany({
       where: { createdAt: { gte: fromDate, lt: toDate } },
@@ -323,8 +325,8 @@ export async function fetchReport(
     const checkOut = s.checkOut?.getTime() ?? Date.now();
     const checkOutDate = new Date(checkOut);
 
-    // لقطة الفوترة إن وُجدت، وإن لم تكن (جلسة منتهية قبل الميزة أو نشطة
-    // الآن) نحسبها تقديرياً وفق نفس قاعدة computeBilling.
+    // لقطة الفوترة إن وُجدت، وإن لم تكن (جلسة منتهية قبل ميزة الفوترة)
+    // نحسبها وفق نفس قاعدة computeBilling.
     let billableHours = s.billableHours;
     let sessionAmount = s.sessionAmount ? Number(s.sessionAmount) : null;
     if (billableHours == null || sessionAmount == null) {
@@ -333,10 +335,15 @@ export async function fetchReport(
       sessionAmount = billing.amount;
     }
 
-    const servicesTotal = s.orders.reduce(
-      (sum, o) => sum + orderTotal(Number(o.service.price), o.details as OrderDetails | null),
-      0
-    );
+    // حصة الخدمات: تُقرأ من لقطة orders_amount المحفوظة لحظة الإنهاء. وإن
+    // غابت (جلسة منتهية قبل إضافة العمود) نحسبها من الطلبات المنفّذة.
+    const servicesTotal =
+      s.ordersAmount != null
+        ? Number(s.ordersAmount)
+        : s.orders.reduce(
+            (sum, o) => sum + orderTotal(Number(o.service.price), o.details as OrderDetails | null),
+            0
+          );
 
     const grossTotal = r2(sessionAmount + servicesTotal);
     const discountAmount = s.discountAmount ? Number(s.discountAmount) : 0;
@@ -439,6 +446,10 @@ export async function fetchReport(
     (sum, s) => sum + s.session_amount,
     0
   );
+  const servicesRevenue = endedSessions.reduce(
+    (sum, s) => sum + s.services_total,
+    0
+  );
   const discountsTotal = endedSessions.reduce(
     (sum, s) => sum + s.discount_amount,
     0
@@ -451,10 +462,13 @@ export async function fetchReport(
     done_count: reportOrders.filter((o) => o.status === "done").length,
     pending_count: reportOrders.filter((o) => o.status === "pending").length,
     cancelled_count: reportOrders.filter((o) => o.status === "cancelled").length,
+    // مرجعي فقط (طلبات done في الفترة) — لا يدخل بالإيراد.
     done_revenue: doneRevenue,
     sessions_revenue: r2(sessionsRevenue),
+    services_revenue: r2(servicesRevenue),
     discounts_total: r2(discountsTotal),
-    revenue: r2(doneRevenue + sessionsRevenue - discountsTotal),
+    // الإيراد = مجموع final_amount للجلسات المنتهية (المبالغ المسوّاة فعلياً).
+    revenue: r2(sessionsRevenue + servicesRevenue - discountsTotal),
     ended_sessions: endedSessions.length,
     billable_hours: billableHoursTotal,
     avg_billable_hours:
@@ -569,22 +583,26 @@ export async function buildReportWorkbook(
   headerRow(s1, ["البند", "القيمة", "الملاحظات", ""], 4);
   const rows: [string, string | number, string][] = [
     ["عدد الطلاب الزوار", report.summary.students_count, "طلاب سجلوا جلستهم أو طلبوا في الفترة"],
-    ["عدد الجلسات", report.summary.sessions_count, "جلسات دخلت في الفترة"],
+    ["عدد الجلسات", report.summary.sessions_count, "جلسات منتهية ضمن الفترة (حسب يوم الخروج)"],
     ["إجمالي الطلبات", report.summary.orders_count, "كل الطلبات المسجلة في الفترة"],
     ["طلبات مكتملة (تم)", report.summary.done_count, "طلبات حُسمت وجُهّزت"],
     ["طلبات معلقة", report.summary.pending_count, "لم تُنفَّذ بعد (أُلغي تلقائياً في نهاية الجلسة إذا ظل معلقاً)"],
     ["طلبات ملغاة", report.summary.cancelled_count, "أُلغي تلقائياً عند إنهاء الجلسة"],
-    ["إيرادات اليوم", report.summary.done_revenue, "مجموع سعر الطلبات المكتملة فقط (الخدمات)"],
+    ["رسوم الجلسات المنتهية (قبل الخصم)", report.summary.sessions_revenue, "مجموع session_amount للجلسات المنتهية في الفترة"],
+    ["خدمات الجلسات المنتهية (قبل الخصم)", report.summary.services_revenue, "مجموع orders_amount المحفوظ لحظة الإنهاء — لا يُقرأ من جدول الطلبات"],
     ["إجمالي الخصومات الممنوحة", report.summary.discounts_total, "خصومات طُبّقت عند إنهاء الجلسات في الفترة"],
-    ["إيرادات الفترة (بعد الخصم)", report.summary.revenue, "الطلبات المكتملة + رسوم الجلسات المنتهية − الخصومات"],
+    ["إيرادات الفترة (بعد الخصم)", report.summary.revenue, "رسوم الجلسات + خدمات الجلسات − الخصومات (مجموع final_amount)"],
+    ["قيمة الطلبات المنفّذة (مرجعي — خارج الإيراد)", report.summary.done_revenue, "مجموع الطلبات done في الفترة — للتوثيق فقط ولا يُحتسب إيراداً"],
     ["جلسات منتهية", report.summary.ended_sessions, "جلسات أُنهيت في الفترة (مسوّاة مالياً)"],
     ["الساعات المحتسبة", report.summary.billable_hours, "مجموع ساعات الجلسات المنتهية — حد أدنى ساعة للجلسة"],
     ["متوسط مدة الجلسة", fmtHM(report.summary.avg_billable_hours), "إجمالي الساعات ÷ عدد الجلسات المنتهية"],
   ];
   const MONEY_ROWS = new Set([
-    "إيرادات اليوم",
+    "رسوم الجلسات المنتهية (قبل الخصم)",
+    "خدمات الجلسات المنتهية (قبل الخصم)",
     "إجمالي الخصومات الممنوحة",
     "إيرادات الفترة (بعد الخصم)",
+    "قيمة الطلبات المنفّذة (مرجعي — خارج الإيراد)",
   ]);
   rows.forEach(([label, value, note], i) => {
     const r = s1.getRow(5 + i);
@@ -608,7 +626,7 @@ export async function buildReportWorkbook(
   // جدول الخدمات داخل نفس الورقة — بعد صفوف الملخص بفراغ (حساب ديناميكي
   // حتى لا يتصادم رأس الجدول مع آخر صف بيانات عند إضافة بنود).
   const svcHeaderRow = 5 + rows.length + 1;
-  headerRow(s1, ["الخدمة", "الطلبات", "المكتملة", "إيرادات (مرجعي)"], svcHeaderRow);
+  headerRow(s1, ["الخدمة", "الطلبات", "المكتملة", "قيمة مرجعية (ل.س)"], svcHeaderRow);
   report.services.forEach((sv, i) => {
     const r = s1.getRow(svcHeaderRow + 1 + i);
     r.getCell(1).value = sv.name;

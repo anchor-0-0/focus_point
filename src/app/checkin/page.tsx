@@ -106,6 +106,19 @@ export default function CheckinPage() {
             <p className="mt-1.5 text-xs text-muted">{t("checkin.phone.hint")}</p>
           </div>
 
+          <div className="field">
+            <label htmlFor="nickname" className="label">
+              {t("checkin.nickname.label")}
+            </label>
+            <input
+              id="nickname"
+              type="text"
+              className="input"
+              placeholder={t("checkin.nickname.label")}
+              disabled={submitting}
+            />
+          </div>
+
           {error && <p className="error">{error}</p>}
 
           <button type="submit" className="btn btn-primary mt-1 w-full" disabled={submitting}>

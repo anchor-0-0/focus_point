@@ -73,6 +73,10 @@ model Session {
   // (لا تُمتلأ عند الجلسات النشطة ولا للجلسات المنتهية قبل هذا التحديث).
   billableHours      Int?     @map("billable_hours") // الساعات المحتسبة للأجر (حد أدنى ساعة)
   sessionAmount      Decimal? @map("session_amount") @db.Decimal(12, 2) // المبلغ قبل الخصم = ساعات × سعر
+  // مجموع الطلبات المنفّذة (done) لحظة الإنهاء — لقطة مرجعية للإيراد.
+  // لا يُقرأ الإيراد من جدول orders أبداً؛ هذا العمود يحفظ حصة الخدمات
+  // من فاتورة الجلسة كما كانت لحظة إنهائها (لا يتأثر بتغيير الأسعار لاحقاً).
+  ordersAmount       Decimal? @map("orders_amount") @db.Decimal(12, 2)
   hourlyRateSnapshot Decimal? @map("hourly_rate_snapshot") @db.Decimal(12, 2) // سعر الساعة لحظة الإنهاء
 
   // حقول الخصم الاختياري — تُملأ لحظة إنهاء الجلسة داخل نفس الـ transaction

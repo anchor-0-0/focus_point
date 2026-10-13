@@ -141,6 +141,9 @@ export async function POST(request: Request) {
           checkOut,
           billableHours: billing.billableHours,
           sessionAmount: billing.amount,
+          // لقطة حصة الخدمات (done) لحظة الإنهاء — هي المصدر الوحيد لإيراد
+          // الخدمات؛ الطلبات المعلّقة تُلغى أدناه ولا تدخل بأي حال.
+          ordersAmount,
           hourlyRateSnapshot: hourlyRate,
           discountScope: discount?.scope ?? null,
           discountType: discount?.type ?? null,

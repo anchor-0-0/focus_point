@@ -11,6 +11,9 @@ import { DEFAULT_HOURLY_RATE_SYP } from "./billing";
 
 export const HOURLY_RATE_KEY = "hourly_rate_syp";
 
+/** سقف منطقي لسعر الساعة (ل.س) — يمنع الإدخالات الفادحة/الخاطئة. */
+export const MAX_HOURLY_RATE_SYP = 100_000_000;
+
 /** الشكل البنيوي لقراءة الإعدادات (يعمل مع العميل العادي ومع tx الداخلي). */
 export type RateDb = {
   setting: {
