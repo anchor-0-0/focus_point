@@ -13,6 +13,7 @@ const LINKS = [
   { href: "/admin/report", key: "admin.nav.report" },
   { href: "/admin/hospitality", key: "admin.nav.hospitality" },
   { href: "/admin/services", key: "admin.nav.services" },
+  { href: "/admin/training", key: "admin.nav.training" },
   { href: "/admin/qr-code", key: "admin.nav.qr" },
   { href: "/admin/settings", key: "admin.nav.settings" },
 ] as const;

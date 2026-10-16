@@ -78,7 +78,7 @@ export default async function ServicesPage({
         <div className="card text-center">
           <div
             className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full"
-            style={{ backgroundColor: "rgba(153, 127, 104, 0.12)" }}
+            style={{ backgroundColor: "color-mix(in srgb, var(--color-tan) 12%, transparent)" }}
           >
             <svg
               width="28"

@@ -4,12 +4,12 @@
 
 ▲ Next.js 16.3.4
 - Local:         http://localhost:3000
-- Network:       http://10.2.0.2:3000
-✓ Ready in 986ms
+- Network:       http://172.22.48.1:3000
+✓ Ready in 2.7s
 ⚠ Attempted to load @next/swc-win32-x64-msvc, but an error occurred: \\?\C:\Users\Rebo\Desktop\StudyZone\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node is not a valid Win32 application.
 \\?\C:\Users\Rebo\Desktop\StudyZone\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node
 ⚠ Warning: Next.js ignored package-lock.json in C:\Users\Rebo because it is outside the current Git repository (C:\Users\Rebo\Desktop\StudyZone).
  To use this directory, set `outputFileTracingRoot` in your Next.js config.
 
-✓ Running next.config.ts took 914ms
-◇ injected env (0) from .env.local // tip: ⌘ override existing { override: true }
+✓ Running next.config.ts took 3.2s
+◇ injected env (0) from .env.local // tip: ⌘ multiple files { path: ['.env.local', '.env'] }

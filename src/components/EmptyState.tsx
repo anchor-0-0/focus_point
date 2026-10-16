@@ -1,7 +1,17 @@
+import type { ReactNode } from "react";
+
 // حالة الفراغ الموحّدة: أيقونة بسيطة بلون --color-tan + جملة قصيرة.
-export function EmptyState({ title, hint }: { title: string; hint?: string }) {
+export function EmptyState({
+  title,
+  hint,
+  action,
+}: {
+  title: string;
+  hint?: string;
+  action?: ReactNode;
+}) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-12 text-center">
+    <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-12 text-center">
       <svg
         width="40"
         height="40"
@@ -20,6 +30,7 @@ export function EmptyState({ title, hint }: { title: string; hint?: string }) {
         <p className="font-semibold text-foreground">{title}</p>
         {hint && <p className="mt-0.5 text-sm text-muted">{hint}</p>}
       </div>
+      {action}
     </div>
   );
 }

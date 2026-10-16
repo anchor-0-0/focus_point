@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useI18n } from "@/components/LanguageProvider";
 import { EndSessionModal } from "@/components/EndSessionModal";
+import { CloseButton } from "@/components/CloseButton";
 import { formatDuration, usePolling } from "@/lib/admin-hooks";
 import { seatLabel } from "@/lib/rooms";
 
@@ -115,7 +116,8 @@ export function SessionDetailPanel({
     document.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    closeRef.current?.focus();
+    // لا تسرق التركيز من نافذة إنهاء الجلسة عند فتحها فوق اللوحة.
+    if (!showEnd) closeRef.current?.focus();
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
@@ -152,27 +154,12 @@ export function SessionDetailPanel({
                 : ""}
             </p>
           </div>
-          <button
+          <CloseButton
             ref={closeRef}
-            type="button"
             className="session-panel-close"
-            onClick={onClose}
-            aria-label={t("common.close")}
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.4"
-              strokeLinecap="round"
-              aria-hidden="true"
-            >
-              <path d="M18 6 6 18" />
-              <path d="m6 6 12 12" />
-            </svg>
-          </button>
+            ariaLabel={t("common.close")}
+            onClose={onClose}
+          />
         </div>
 
         {error && <p className="text-sm text-danger">{error}</p>}

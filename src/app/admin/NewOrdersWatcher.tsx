@@ -214,7 +214,7 @@ useEffect(() => {
         <span
           className="pointer-events-none absolute -inset-2 rounded-full"
           style={{
-            boxShadow: "0 0 0 6px var(--color-accent-soft, rgba(180,120,40,0.18))",
+            boxShadow: "0 0 0 6px color-mix(in srgb, var(--color-primary) 22%, transparent)",
             animation: "fp-pulse-ring 1.2s ease-out forwards",
           }}
           aria-hidden="true"
@@ -223,7 +223,8 @@ useEffect(() => {
 
       <a
         href="/admin/orders"
-        className="flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-2 text-xs shadow-lg transition hover:bg-surface-soft"
+        className="flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-2 text-xs transition hover:bg-primary-soft"
+        style={{ boxShadow: "var(--shadow-card)" }}
         title={t("admin.nav.orders")}
       >
         <span className={pulse ? "pulse-dot" : "h-2.5 w-2.5 rounded-full bg-accent"} />
@@ -242,7 +243,8 @@ useEffect(() => {
         onClick={toggleMute}
         aria-pressed={muted}
         title={muted ? t("admin.orders.muteOff") : t("admin.orders.muteOn")}
-        className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface shadow-lg transition hover:bg-surface-soft"
+        className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface transition hover:bg-primary-soft"
+        style={{ boxShadow: "var(--shadow-card)" }}
       >
         <svg
           width="15"
@@ -275,7 +277,8 @@ useEffect(() => {
           type="button"
           onClick={askPermission}
           title={t("admin.orders.enableNotifications")}
-          className="flex h-9 items-center justify-center rounded-full border border-border bg-surface px-3 text-xs shadow-lg transition hover:bg-surface-soft"
+          className="flex h-9 items-center justify-center rounded-full border border-border bg-surface px-3 text-xs transition hover:bg-primary-soft"
+          style={{ boxShadow: "var(--shadow-card)" }}
         >
           {t("admin.orders.enableNotifications")}
         </button>

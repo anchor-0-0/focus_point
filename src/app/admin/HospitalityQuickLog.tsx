@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useI18n } from "@/components/LanguageProvider";
 import { useToast } from "@/components/Toast";
+import { CloseButton } from "@/components/CloseButton";
+import { formatThousands } from "@/lib/money";
 
 // ============================================================
 // Ø²Ø± + Ù†Ø§ÙØ°Ø© Â«ØªØ³Ø¬ÙŠÙ„ Ø¶ÙŠØ§ÙØ© Ø³Ø±ÙŠØ¹Ø©Â» â€” ÙŠØ¸Ù‡Ø± ÙÙŠ Ø§Ù„Ù‡ÙŠÙƒÙ„ Ø§Ù„Ø¹Ø§Ù…
@@ -275,14 +277,11 @@ export function HospitalityQuickLogModal({
               {t("admin.hospitality.quickSub")}
             </p>
           </div>
-          <button
-            type="button"
+          <CloseButton
             className="session-panel-close"
-            aria-label={t("common.close")}
-            onClick={onClose}
-          >
-            Ã—
-          </button>
+            ariaLabel={t("common.close")}
+            onClose={onClose}
+          />
         </div>
 
         <div className="hosp-body">
@@ -410,7 +409,7 @@ export function HospitalityQuickLogModal({
                 >
                   {s.name}
                   <span className="hosp-chip-price tabular-nums">
-                    {s.price}
+                    {formatThousands(s.price)}
                   </span>
                 </button>
               ))}
@@ -449,7 +448,7 @@ export function HospitalityQuickLogModal({
           {selected && (
             <p className="hosp-estimate tabular-nums">
               {t("admin.hospitality.statValue")}:{" "}
-              {Number((selected.price * Number(qtyStr || 0)).toFixed(2))}
+              {formatThousands(Number((selected.price * Number(qtyStr || 0)).toFixed(2)))}
             </p>
           )}
 

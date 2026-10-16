@@ -148,7 +148,7 @@ export function ReportClient({ initial }: { initial: ReportData }) {
           {t("admin.report.footnote")}
         </p>
         {error && (
-          <p className="mt-3 text-sm font-medium text-[var(--color-danger)]">
+          <p className="mt-3 text-sm font-medium text-danger">
             {error}
           </p>
         )}
@@ -410,7 +410,7 @@ export function ReportClient({ initial }: { initial: ReportData }) {
           </section>
         </>
       ) : error ? (
-        <p className="text-sm font-medium text-[var(--color-danger)]">
+        <p className="text-sm font-medium text-danger">
           {error}
         </p>
       ) : (

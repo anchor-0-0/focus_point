@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useI18n } from "@/components/LanguageProvider";
+import { CloseButton } from "@/components/CloseButton";
 import { formatThousands } from "@/lib/money";
 import type { DiscountScope, DiscountType } from "@/lib/discount";
 
@@ -81,14 +82,11 @@ export function InvoiceModal({ invoice }: { invoice: InvoiceData }) {
           />
           <div className="invoice-modal-dialog">
             <div className="invoice-modal-bar no-print">
-              <button
-                type="button"
+              <CloseButton
                 className="btn btn-ghost invoice-modal-close"
-                onClick={() => setOpen(false)}
-              >
-                <span aria-hidden="true">✕</span>
-                {t("ended.invoice.close")}
-              </button>
+                ariaLabel={t("common.close")}
+                onClose={() => setOpen(false)}
+              />
               <button
                 type="button"
                 className="btn btn-primary invoice-modal-print"
@@ -112,7 +110,7 @@ export function InvoiceModal({ invoice }: { invoice: InvoiceData }) {
                 <div className="text-end">
                   <p className="text-sm font-semibold text-primary">{t("ended.invoice.title")}</p>
                   <p className="text-xs text-muted">Focus Point</p>
-                  <p className="tabula mt-0.5 text-[11px] text-muted" dir="ltr">
+                  <p className="tabular-nums mt-0.5 text-[11px] text-muted" dir="ltr">
                     {invoice.issueDateText}
                   </p>
                 </div>

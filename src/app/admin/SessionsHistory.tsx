@@ -167,7 +167,7 @@ export function SessionsHistory() {
       </div>
 
       {error && (
-        <p className="text-sm font-medium text-[var(--color-danger)]">{error}</p>
+        <p className="text-sm font-medium text-danger">{error}</p>
       )}
 
       {!data && !error ? (

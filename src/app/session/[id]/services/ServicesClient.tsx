@@ -390,7 +390,7 @@ export function ServicesClient({
           <div
             className="pop-in mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full"
             style={{
-              background: "linear-gradient(135deg, #593131 0%, #402127 100%)",
+              background: "linear-gradient(135deg, var(--color-maroon) 0%, var(--color-primary) 100%)",
             }}
           >
             <span className="text-4xl leading-none text-surface">

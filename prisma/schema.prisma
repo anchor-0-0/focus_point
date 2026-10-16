@@ -149,6 +149,39 @@ model HospitalityLog {
 }
 
 // ============================================================
+// دورات قاعة التدريب
+// ------------------------------------------------------------
+// قسم توثيقي مستقل عن نظام الكراسي والجلسات تماماً:
+//   - تُحجز القاعة مسبقاً بالهاتف، ولا تدخل بخريطة الكراسي ولا بتدفق الطالب.
+//   - كل القيم تُدخل يدوياً من المدير وتُخزَّن كما هي (لا حساب تلقائي ولا
+//     تعديل، ولا ربط بإيرادات الجلسات أو التقارير أو سجل الجلسات).
+//   - حالة الدورة (قادمة/جارية/منتهية) تُشتق من التواريخ للعرض فقط.
+//   - days: أيام الأسبوع (acronyms) — ['sat','sun','mon','tue','wed','thu','fri'].
+//   - start_time/end_time: نص بترميز 24 ساعة "HH:MM" (لا Time لتجنّب إزاحة المنطقة).
+// ============================================================
+model TrainingCourse {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String
+  code               String // فريد (يُتحقق عدم التكرار دون حساسية لحالة الأحرف)
+  trainer            String
+  startDate          DateTime @map("start_date") @db.Date
+  endDate            DateTime @map("end_date") @db.Date
+  startTime          String   @map("start_time") // "HH:MM"
+  endTime            String   @map("end_time") // "HH:MM"
+  days               String[] @default([])
+  studentsCount      Int      @map("students_count")
+  sessionsCount      Int      @map("sessions_count")
+  totalCost          Decimal  @map("total_cost") @db.Decimal(12, 2)
+  costPerStudent     Decimal  @map("cost_per_student") @db.Decimal(12, 2)
+  centerSharePercent Decimal  @map("center_share_percent") @db.Decimal(5, 2)
+  notes              String?
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("training_courses")
+}
+
+// ============================================================
 // الطلبات (خدمة مطلوبة خلال جلسة)
 // ============================================================
 model Order {

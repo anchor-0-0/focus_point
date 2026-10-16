@@ -98,6 +98,21 @@ body {
 }
 
 /* ============================================================
+   حلقة التركيز الموحّدة — للكيبورد فقط (لا تظهر مع نقر الفأرة).
+   الحقول لها معالجتها الخاصة في .input، فنستهدف العناصر التفاعلية
+   الأخرى بلا استثناء. بلا مربع تمرير أفقي إضافي.
+   ============================================================ */
+a:focus-visible,
+button:focus-visible,
+select:focus-visible,
+summary:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ============================================================
    مكونات الطالب — الصفحة، البطاقات، الأزرار، الحقول
    ============================================================ */
 @layer components {
@@ -3119,4 +3134,256 @@ nav li > a:hover {
   display: inline-flex;
   gap: 6px;
   margin-inline-start: auto;
+}
+
+/* ============================================================
+   قاعة التدريب — الترويسة، الفلترة، بطاقات الدورات، النوافذ
+   إدخال يدوي: تخزين وعرض فقط، غير محتسب ضمن إيرادات الجلسات.
+   ============================================================ */
+
+/* الترويسة: العنوان والوصف + زر الإضافة الأساسي */
+.training-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.training-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* شريط الفلترة */
+.training-toolbar {
+  @apply flex flex-col border border-border bg-surface;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+@media (min-width: 900px) {
+  .training-toolbar {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+.training-search {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.training-select {
+  flex: 0 0 auto;
+  width: 180px;
+}
+
+/* تبويبات الحالة */
+.training-seg {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-tan) 8%, var(--color-surface));
+  overflow-x: auto;
+}
+.training-seg-btn {
+  flex: 0 0 auto;
+  padding: 7px 14px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+  background: transparent;
+  border-radius: calc(var(--radius-sm) - 2px);
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+.training-seg-btn:hover {
+  color: var(--color-primary);
+}
+.training-seg-btn.is-active {
+  color: var(--color-primary);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-subtle);
+}
+
+/* سطر العدد + ملاحظة عدم الاحتساب */
+.training-list-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.training-count {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-foreground);
+}
+.training-note {
+  @apply inline-flex items-center whitespace-nowrap;
+  padding: 4px 11px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-brown);
+  background: color-mix(in srgb, var(--color-tan) 16%, var(--color-surface));
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+}
+
+/* شبكة بطاقات الدورات */
+.training-grid {
+  @apply grid;
+  gap: 16px;
+}
+@media (min-width: 760px) {
+  .training-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1440px) {
+  .training-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* بطاقة الدورة */
+.training-card {
+  @apply flex flex-col border border-border bg-surface;
+  gap: 16px;
+  padding: 18px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  animation: rise-in 420ms var(--ease-out-soft) backwards;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+.training-card:hover {
+  border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-border));
+  box-shadow: 0 12px 28px -16px color-mix(in srgb, var(--color-primary) 26%, transparent);
+}
+.training-card:nth-child(1) { animation-delay: 40ms; }
+.training-card:nth-child(2) { animation-delay: 100ms; }
+.training-card:nth-child(3) { animation-delay: 160ms; }
+.training-card:nth-child(4) { animation-delay: 220ms; }
+.training-card:nth-child(5) { animation-delay: 280ms; }
+.training-card:nth-child(6) { animation-delay: 340ms; }
+
+.training-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.training-card-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.training-card-name {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--color-foreground);
+}
+.training-card-trainer {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+/* صف الرمز + الأيام */
+.training-card-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.training-code {
+  @apply inline-flex items-center whitespace-nowrap;
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-brown);
+  background: color-mix(in srgb, var(--color-tan) 18%, var(--color-surface));
+  border-radius: 999px;
+}
+.training-day-chip {
+  padding: 3px 9px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 12%, transparent);
+  border-radius: 999px;
+}
+
+/* شبكة معلومات الدورة (الفترة/الوقت/نسبة المركز) */
+.training-info {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+.training-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.training-info-item.full {
+  grid-column: 1 / -1;
+}
+.training-info-item dt {
+  font-size: 0.6875rem;
+  color: var(--color-text-muted);
+}
+.training-info-item dd {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-foreground);
+  overflow-wrap: anywhere;
+}
+
+/* شريط الأرقام (الطلاب/الجلسات/التكلفة/لشخص) */
+.training-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+}
+.training-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.training-stat-num {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-foreground);
+}
+.training-stat-num.money {
+  color: var(--color-primary);
+}
+.training-stat-lbl {
+  font-size: 0.6875rem;
+  color: var(--color-text-muted);
+}
+
+/* أزرار البطاقة */
+.training-card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+  margin-top: auto;
 }

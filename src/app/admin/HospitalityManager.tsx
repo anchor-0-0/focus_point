@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useI18n } from "@/components/LanguageProvider";
 import { useToast } from "@/components/Toast";
+import { CloseButton } from "@/components/CloseButton";
 import { formatThousands } from "@/lib/money";
 import { HospitalityQuickLogButton } from "./HospitalityQuickLog";
 
@@ -504,6 +505,17 @@ function HospitalityNamesModal({
     })();
   }, [load]);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
+  }, [onClose]);
+
   const patch = useCallback(
     async (id: string, data: { name?: string; is_active?: boolean }) => {
       if (busy) return;
@@ -590,14 +602,11 @@ function HospitalityNamesModal({
               {t("admin.hospitality.namesSub")}
             </p>
           </div>
-          <button
-            type="button"
+          <CloseButton
             className="session-panel-close"
-            aria-label={t("common.close")}
-            onClick={onClose}
-          >
-            Ã—
-          </button>
+            ariaLabel={t("common.close")}
+            onClose={onClose}
+          />
         </div>
 
         <div className="hosp-body">

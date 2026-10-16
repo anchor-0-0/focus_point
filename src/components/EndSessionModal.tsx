@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useI18n } from "@/components/LanguageProvider";
 import { useToast } from "@/components/Toast";
+import { CloseButton } from "@/components/CloseButton";
 import { formatDuration, usePolling } from "@/lib/admin-hooks";
 import { seatLabel } from "@/lib/rooms";
 import { formatThousands } from "@/lib/money";
@@ -255,27 +256,12 @@ export function EndSessionModal({
                 : ""}
             </p>
           </div>
-          <button
+          <CloseButton
             ref={closeRef}
-            type="button"
             className="session-panel-close"
-            onClick={onClose}
-            aria-label={t("common.close")}
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.4"
-              strokeLinecap="round"
-              aria-hidden="true"
-            >
-              <path d="M18 6 6 18" />
-              <path d="m6 6 12 12" />
-            </svg>
-          </button>
+            ariaLabel={t("common.close")}
+            onClose={onClose}
+          />
         </div>
 
         {loadError && <p className="text-sm text-danger">{loadError}</p>}

@@ -232,6 +232,7 @@ export const dict = {
   "admin.nav.hospitality": { ar: "الضيافة", en: "Hospitality" },
   "admin.nav.services": { ar: "الخدمات", en: "Services" },
   "admin.nav.qr": { ar: "باركود الاستقبال", en: "Check-in QR code" },
+  "admin.nav.training": { ar: "قاعة التدريب", en: "Training Hall" },
   "admin.nav.settings": { ar: "الإعدادات", en: "Settings" },
 
   // ─── لوحة التحكم العامة ───────────────────────────────
