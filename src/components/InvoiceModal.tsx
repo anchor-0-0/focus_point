@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useI18n } from "@/components/LanguageProvider";
 import { CloseButton } from "@/components/CloseButton";
 import { formatThousands } from "@/lib/money";
+import { assetPath } from "@/lib/asset";
 import type { DiscountScope, DiscountType } from "@/lib/discount";
 
 // بيانات الفاتورة — تُبنى في صفحة النهاية (خادومية) وتُمرَّر هنا للعرض
@@ -101,9 +102,9 @@ export function InvoiceModal({ invoice }: { invoice: InvoiceData }) {
               <div className="invoice-sheet-head">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/brand/v1-dark.svg"
+                  src={assetPath("/brand/logo.png")}
                   alt="Focus Point"
-                  width={71}
+                  width={76}
                   height={48}
                   className="h-11 w-auto object-contain"
                 />

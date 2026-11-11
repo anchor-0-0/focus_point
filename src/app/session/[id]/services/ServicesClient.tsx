@@ -9,6 +9,7 @@ import { useLiveElapsed } from "@/hooks/useLiveElapsed";
 import { useSessionWatcher } from "@/hooks/useSessionWatcher";
 import { clearStoredActiveSessionId } from "@/lib/active-session";
 import { formatThousands } from "@/lib/money";
+import { assetPath } from "@/lib/asset";
 import {
   MAX_FILE_BYTES,
   MAX_FILE_MB,
@@ -391,11 +392,11 @@ export function ServicesClient({
       <main className="page">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/brand/v4-outline.svg"
+          src={assetPath("/brand/logo.png")}
           alt="Focus Point"
-          width={59}
-          height={28}
-          className="h-7 w-auto object-contain animate-fade-in-up"
+          width={76}
+          height={48}
+          className="h-10 w-auto object-contain animate-fade-in-up"
         />
         <div className="card text-center animate-fade-in-up">
           <div
@@ -692,11 +693,12 @@ export function ServicesClient({
         <div className="services-bar">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/brand/v4-outline.svg"
+            src={assetPath("/brand/logo.png")}
             alt="Focus Point"
-            className="services-bar-logo"
-            width={59}
-            height={28}
+            className="services-bar-logo object-contain"
+            width={64}
+            height={40}
+            style={{ height: "2.25rem", width: "auto" }}
           />
           <MiniTimer elapsedMs={elapsedMs} />
         </div>

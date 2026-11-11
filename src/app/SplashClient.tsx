@@ -57,10 +57,10 @@ export function SplashClient() {
       <div className="splash-stage">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={assetPath("/brand/v2-light.svg")}
+          src={assetPath("/brand/logo.png")}
           alt="Focus Point"
-          width={160}
-          height={76}
+          width={180}
+          height={110}
           className="splash-logo splash-enter"
           style={{ animationDelay: "80ms", objectFit: "contain", height: "auto", maxWidth: "85vw" }}
         />
