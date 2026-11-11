@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import { requireAdminOrRedirect } from "@/lib/admin-require";
-import { translate, langFromValue, LANG_COOKIE, type DictKey } from "@/lib/i18n";
+import { translate, type DictKey } from "@/lib/i18n";
+import { getServerLang } from "@/lib/server-lang";
 import { QrManager } from "../QrManager";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const store = await cookies();
-  const lang = langFromValue(store.get(LANG_COOKIE)?.value);
+  const lang = await getServerLang();
   return { title: translate("admin.nav.qr", lang) };
 }
 
@@ -14,8 +13,7 @@ const DEFAULT_CHECKIN_URL = "http://localhost:3000/checkin";
 
 export default async function AdminQrCodePage() {
   await requireAdminOrRedirect();
-  const store = await cookies();
-  const lang = langFromValue(store.get(LANG_COOKIE)?.value);
+  const lang = await getServerLang();
   const t = (k: DictKey) => translate(k, lang);
 
   // يُستخدم احتياطياً فقط لو فشل الاكتشاف التلقائي لشبكات الجهاز؛

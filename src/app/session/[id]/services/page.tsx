@@ -1,15 +1,16 @@
 import { prisma } from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
-import { cookies } from "next/headers";
 import type { Metadata } from "next";
-import { translate, langFromValue, LANG_COOKIE } from "@/lib/i18n";
+import { translate } from "@/lib/i18n";
+import { getServerLang } from "@/lib/server-lang";
 import { ServicesClient, type ServiceDto } from "./ServicesClient";
 
-export const dynamic = "force-dynamic";
+export function generateStaticParams() {
+  return [{ id: "demo" }];
+}
 
 export async function generateMetadata(): Promise<Metadata> {
-  const store = await cookies();
-  const lang = langFromValue(store.get(LANG_COOKIE)?.value);
+  const lang = await getServerLang();
   return { title: translate("services.title", lang) };
 }
 
@@ -20,8 +21,27 @@ export default async function ServicesPage({
 }) {
   const { id } = await params;
 
-  const store = await cookies();
-  const lang = langFromValue(store.get(LANG_COOKIE)?.value);
+  if (id === "demo" || process.env.NEXT_PUBLIC_DEMO_MODE === "true") {
+    const demoServices: ServiceDto[] = [
+      { id: "s-1", name: "قهوة تركي", category: "مشروبات ساخنة", price: 2500 },
+      { id: "s-2", name: "إسبريسو", category: "مشروبات ساخنة", price: 3000 },
+      { id: "s-3", name: "كابتشينو", category: "مشروبات ساخنة", price: 3500 },
+      { id: "s-4", name: "شاي خمير", category: "مشروبات ساخنة", price: 2000 },
+      { id: "s-5", name: "مياه معدنية", category: "مشروبات باردة", price: 1500 },
+      { id: "s-6", name: "طباعة A4 أبيض وأسود", category: "خدمات مكتبية", price: 500 },
+      { id: "s-7", name: "طباعة A4 ملون", category: "خدمات مكتبية", price: 1500 },
+    ];
+    return (
+      <ServicesClient
+        sessionId="demo"
+        checkInIso={new Date(Date.now() - 42 * 60 * 1000).toISOString()}
+        serverNowIso={new Date().toISOString()}
+        services={demoServices}
+      />
+    );
+  }
+
+  const lang = await getServerLang();
   const tr = (k: Parameters<typeof translate>[0]) => translate(k, lang);
 
   // ملاحظة: redirect/notFound يجب استدعاؤهما خارج try (توثيق Next.js).

@@ -1,20 +1,18 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import { requireAdminOrRedirect } from "@/lib/admin-require";
-import { translate, langFromValue, LANG_COOKIE, type DictKey } from "@/lib/i18n";
+import { translate, type DictKey } from "@/lib/i18n";
+import { getServerLang } from "@/lib/server-lang";
 import { SessionsTable } from "../SessionsTable";
 import { SessionsHistory } from "../SessionsHistory";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const store = await cookies();
-  const lang = langFromValue(store.get(LANG_COOKIE)?.value);
+  const lang = await getServerLang();
   return { title: translate("admin.nav.sessions", lang) };
 }
 
 export default async function AdminSessionsPage() {
   await requireAdminOrRedirect();
-  const store = await cookies();
-  const lang = langFromValue(store.get(LANG_COOKIE)?.value);
+  const lang = await getServerLang();
   const t = (k: DictKey) => translate(k, lang);
 
   return (

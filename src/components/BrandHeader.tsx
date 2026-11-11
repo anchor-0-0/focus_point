@@ -7,6 +7,7 @@
 // كل النسخ منقولة حرفياً عن ملف الـ SVG الأصلي.
 // ============================================================
 import { useI18n } from "@/components/LanguageProvider";
+import { assetPath } from "@/lib/asset";
 
 type BrandHeaderProps = {
   readonly variant?: "compact" | "large";
@@ -22,7 +23,7 @@ export function BrandHeader({ variant = "compact" }: BrandHeaderProps) {
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={large ? "/brand/v1-dark.svg" : "/brand/v4-outline.svg"}
+          src={assetPath(large ? "/brand/v1-dark.svg" : "/brand/v4-outline.svg")}
           alt="Focus Point"
           className="brand-logo"
           width={large ? 95 : 59}

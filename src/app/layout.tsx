@@ -1,10 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Cairo, Inter } from "next/font/google";
-import { cookies } from "next/headers";
 import { ToastProvider } from "@/components/Toast";
 import { LanguageProvider } from "@/components/LanguageProvider";
-import { DEFAULT_LANG, LANG_COOKIE, translate, langFromValue, type Lang, type DictKey } from "@/lib/i18n";
+import { getServerLang } from "@/lib/server-lang";
+import { translate, type DictKey } from "@/lib/i18n";
+import { DemoBadge } from "@/components/DemoBadge";
+import { DemoMockClient } from "@/components/DemoMockClient";
 import "./globals.css";
 
 // Cairo للنصوص العربية، وInter للأرقام/الإنجليزية/العناصر الميكانيكية.
@@ -19,13 +21,7 @@ const inter = Inter({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  let lang: Lang = DEFAULT_LANG;
-  try {
-    const store = await cookies();
-    lang = langFromValue(store.get(LANG_COOKIE)?.value);
-  } catch {
-    // بيئة دون كوكيز (أثناء البناء) — نبقى على العربية الافتراضية.
-  }
+  const lang = await getServerLang();
   const t = (k: DictKey) => translate(k, lang);
   return {
     title: {
@@ -39,20 +35,16 @@ export async function generateMetadata(): Promise<Metadata> {
 // لون شريط المتصفح على الموبايل بنفس العائلة اللونية للسبلاش —
 // يمنع وميضاً أبيض/رمادياً قبل رسم أول محتوى غامق.
 export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
   themeColor: "#402127",
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   // قراءة لغة الجلسة من الكوكي لضبط اتجاه الصفحة RTL/LTR عند تصيير
   // الخادم (فلا يومض الاتجاه ولا تختلط المسافات عند فتح الصفحة).
-  let lang: Lang = DEFAULT_LANG;
-  try {
-    const store = await cookies();
-    const raw = store.get(LANG_COOKIE)?.value;
-    if (raw === "en") lang = "en";
-  } catch {
-    // بيئة دون كوكيز (أثناء البناء) — نبقى على العربية الافتراضية.
-  }
+  const lang = await getServerLang();
 
   return (
     <html
@@ -62,7 +54,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     >
       <body className="min-h-full bg-background text-foreground">
         <LanguageProvider initialLang={lang}>
-          <ToastProvider>{children}</ToastProvider>
+          <ToastProvider>
+            <DemoBadge />
+            <DemoMockClient />
+            {children}
+          </ToastProvider>
         </LanguageProvider>
       </body>
     </html>

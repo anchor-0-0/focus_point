@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { AdminNav, AdminNavCompact, LogoutIconButton } from "./AdminNav";
 import { HospitalityQuickLogButton } from "./HospitalityQuickLog";
 import { NewOrdersWatcher } from "./NewOrdersWatcher";
+import { assetPath } from "@/lib/asset";
 import { useI18n } from "@/components/LanguageProvider";
 
 // هيكل لوحة التحكم (شريط جانبي + هيدر + تنقل).
@@ -28,7 +29,7 @@ export function AdminChrome({ children }: { children: ReactNode }) {
         <div className="border-b border-border px-6 py-5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/brand/v4-outline.svg"
+            src={assetPath("/brand/v4-outline.svg")}
             alt="Focus Point"
             width={76}
             height={36}
@@ -46,7 +47,7 @@ export function AdminChrome({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-2">
 {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/brand/v4-outline.svg"
+              src={assetPath("/brand/v4-outline.svg")}
               alt="Focus Point"
               width={59}
               height={28}

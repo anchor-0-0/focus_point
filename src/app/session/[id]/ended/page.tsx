@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { getServerLang } from "@/lib/server-lang";
 import {
   translate,
-  langFromValue,
-  LANG_COOKIE,
   roomName,
   type DictKey,
   type Lang,
@@ -20,11 +18,12 @@ import {
   type InvoiceDiscount,
 } from "@/components/InvoiceModal";
 
-export const dynamic = "force-dynamic";
+export function generateStaticParams() {
+  return [{ id: "demo" }];
+}
 
 export async function generateMetadata(): Promise<Metadata> {
-  const store = await cookies();
-  const lang = langFromValue(store.get(LANG_COOKIE)?.value);
+  const lang = await getServerLang();
   return { title: translate("ended.title", lang) };
 }
 
@@ -78,13 +77,7 @@ export default async function EndedSessionPage({
 }) {
   const { id } = await params;
 
-  let lang = "ar" as "ar" | "en";
-  try {
-    const store = await cookies();
-    lang = langFromValue(store.get(LANG_COOKIE)?.value);
-  } catch {
-    // بيئة دون كوكيز — نبقى على العربية الافتراضية.
-  }
+  const lang = await getServerLang();
 
   const t = (k: DictKey) => translate(k, lang);
   const locale = t("meta.locale");
@@ -97,38 +90,63 @@ export default async function EndedSessionPage({
   let orderCount: number | null = null;
 
   try {
-    const session = await prisma.session.findUnique({
-      where: { id },
-      select: {
-        checkIn: true,
-        checkOut: true,
-        status: true,
-        billableHours: true,
-        sessionAmount: true,
-        hourlyRateSnapshot: true,
-        discountScope: true,
-        discountType: true,
-        discountValue: true,
-        discountAmount: true,
-        discountNote: true,
-        finalAmount: true,
-        student: { select: { name: true, phone: true } },
-        spot: { select: { room: true, seatGroup: true, seatNumber: true } },
-        orders: {
-          where: { status: "done" },
-          orderBy: { createdAt: "asc" },
-          select: {
-            details: true,
-            service: { select: { name: true, price: true } },
-          },
-        },
-        _count: {
-          select: {
-            orders: { where: { status: { not: "cancelled" } } },
-          },
-        },
-      },
-    });
+    const session =
+      id === "demo" || process.env.NEXT_PUBLIC_DEMO_MODE === "true"
+        ? {
+            checkIn: new Date(Date.now() - 105 * 60 * 1000),
+            checkOut: new Date(),
+            status: "ended",
+            billableHours: 2,
+            sessionAmount: 10000,
+            hourlyRateSnapshot: 5000,
+            discountScope: null,
+            discountType: null,
+            discountValue: null,
+            discountAmount: null,
+            discountNote: null,
+            finalAmount: 13500,
+            student: { name: "أحمد العلي", phone: "0944123456" },
+            spot: { room: "silent", seatGroup: "silent_bar", seatNumber: 7 },
+            orders: [
+              {
+                details: { quantity: 1, sugar: "وسط" },
+                service: { name: "كابتشينو", price: 3500 },
+              },
+            ],
+            _count: { orders: 1 },
+          }
+        : await prisma.session.findUnique({
+            where: { id },
+            select: {
+              checkIn: true,
+              checkOut: true,
+              status: true,
+              billableHours: true,
+              sessionAmount: true,
+              hourlyRateSnapshot: true,
+              discountScope: true,
+              discountType: true,
+              discountValue: true,
+              discountAmount: true,
+              discountNote: true,
+              finalAmount: true,
+              student: { select: { name: true, phone: true } },
+              spot: { select: { room: true, seatGroup: true, seatNumber: true } },
+              orders: {
+                where: { status: "done" },
+                orderBy: { createdAt: "asc" },
+                select: {
+                  details: true,
+                  service: { select: { name: true, price: true } },
+                },
+              },
+              _count: {
+                select: {
+                  orders: { where: { status: { not: "cancelled" } } },
+                },
+              },
+            },
+          });
 
     if (session) {
       const checkIn = session.checkIn;

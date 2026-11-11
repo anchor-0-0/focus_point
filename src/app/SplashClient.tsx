@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/LanguageProvider";
+import { assetPath } from "@/lib/asset";
 
 // ============================================================
 // صفحة السبلاش — أول شاشة بعد مسح الباركود
@@ -56,7 +57,7 @@ export function SplashClient() {
       <div className="splash-stage">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/brand/v2-light.svg"
+          src={assetPath("/brand/v2-light.svg")}
           alt="Focus Point"
           width={150}
           height={110}

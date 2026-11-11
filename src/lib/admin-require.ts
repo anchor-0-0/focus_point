@@ -6,6 +6,9 @@ import { ADMIN_COOKIE, isValidSessionCookie } from "@/lib/admin-auth";
 // تحقق من جلسة المدير في Server Component / Layout.
 // عند الفشل يعيد توجيه لصفحة الدخول.
 export async function requireAdminOrRedirect() {
+  if (process.env.NEXT_PUBLIC_DEMO_MODE === "true") {
+    return;
+  }
   const cookieStore = await cookies();
   const token = cookieStore.get(ADMIN_COOKIE)?.value;
 

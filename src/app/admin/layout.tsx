@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { cookies } from "next/headers";
-import { translate, langFromValue, LANG_COOKIE, type DictKey } from "@/lib/i18n";
+import { getServerLang } from "@/lib/server-lang";
+import { translate, type DictKey } from "@/lib/i18n";
 import { AdminChrome } from "./AdminChrome";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const store = await cookies();
-  const lang = langFromValue(store.get(LANG_COOKIE)?.value);
+  const lang = await getServerLang();
   const t = (k: DictKey) => translate(k, lang);
   return {
     title: {

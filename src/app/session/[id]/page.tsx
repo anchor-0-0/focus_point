@@ -1,19 +1,20 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
+import { getServerLang } from "@/lib/server-lang";
 import { SessionClient } from "./SessionClient";
 import { EndedRedirect } from "./EndedRedirect";
-import { translate, langFromValue, LANG_COOKIE } from "@/lib/i18n";
+import { translate } from "@/lib/i18n";
 
-export const dynamic = "force-dynamic";
+export function generateStaticParams() {
+  return [{ id: "demo" }];
+}
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function generateMetadata(): Promise<Metadata> {
-  const store = await cookies();
-  const lang = langFromValue(store.get(LANG_COOKIE)?.value);
+  const lang = await getServerLang();
   return { title: translate("session.metaTitle", lang) };
 }
 
@@ -23,6 +24,20 @@ export default async function SessionPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+
+  if (id === "demo" || process.env.NEXT_PUBLIC_DEMO_MODE === "true") {
+    const demoStart = new Date(Date.now() - 42 * 60 * 1000);
+    return (
+      <SessionClient
+        sessionId="demo"
+        checkInIso={demoStart.toISOString()}
+        serverNowIso={new Date().toISOString()}
+        room="silent"
+        groupLabel="القاعة الصامتة"
+        seatNumber={7}
+      />
+    );
+  }
 
   // رابط بمعرّف عشوائي/مبتور → 404 منطقي، لا خطأ قاعدة بيانات.
   if (!UUID_RE.test(id)) {

@@ -1,9 +1,8 @@
-import { cookies } from "next/headers";
-import { translate, langFromValue, LANG_COOKIE } from "@/lib/i18n";
+import { translate } from "@/lib/i18n";
+import { getServerLang } from "@/lib/server-lang";
 
 export default async function NotFound() {
-  const store = await cookies();
-  const lang = langFromValue(store.get(LANG_COOKIE)?.value);
+  const lang = await getServerLang();
 
   return (
     <main className="page">

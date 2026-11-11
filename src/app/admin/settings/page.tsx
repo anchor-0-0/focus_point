@@ -1,24 +1,25 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import { requireAdminOrRedirect } from "@/lib/admin-require";
 import { prisma } from "@/lib/prisma";
 import { readHourlyRate } from "@/lib/settings";
-import { translate, langFromValue, LANG_COOKIE, type DictKey } from "@/lib/i18n";
+import { translate, type DictKey } from "@/lib/i18n";
+import { getServerLang } from "@/lib/server-lang";
 import { SettingsManager } from "../SettingsManager";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const store = await cookies();
-  const lang = langFromValue(store.get(LANG_COOKIE)?.value);
+  const lang = await getServerLang();
   return { title: translate("admin.nav.settings", lang) };
 }
 
 export default async function AdminSettingsPage() {
   await requireAdminOrRedirect();
-  const store = await cookies();
-  const lang = langFromValue(store.get(LANG_COOKIE)?.value);
+  const lang = await getServerLang();
   const t = (k: DictKey) => translate(k, lang);
 
-  const initialRate = await readHourlyRate(prisma);
+  const initialRate =
+    process.env.NEXT_PUBLIC_DEMO_MODE === "true"
+      ? 5000
+      : await readHourlyRate(prisma);
 
   return (
     <div className="admin-page">

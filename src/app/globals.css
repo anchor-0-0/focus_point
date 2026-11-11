@@ -74,14 +74,16 @@
 /* يمنع أي تمرير أفقي من الهالات الزخرفية العابرة للحدود (clip لا يُنشئ
    حاوية تمرير، فيبقى fixed/absolute يعمل بشكل طبيعي). */
 html {
-  overflow-x: clip;
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 body {
   background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-cairo), Arial, Helvetica, sans-serif;
-  overflow-x: clip;
+  overflow-x: hidden;
+  max-width: 100%;
   background-image:
     radial-gradient(
       1100px 480px at 88% -6%,
@@ -143,6 +145,7 @@ summary:focus-visible,
     border-radius: var(--radius-md);
     padding: 24px;
     box-shadow: var(--shadow-card);
+    overflow: hidden;
   }
   .card::before {
     content: "";
@@ -172,6 +175,7 @@ summary:focus-visible,
     border-radius: var(--radius-lg);
     padding: 32px;
     box-shadow: var(--shadow-card);
+    overflow: hidden;
   }
 
   .card-title {
@@ -533,9 +537,7 @@ summary:focus-visible,
     width: 100%;
     max-width: 24rem;
     margin-inline: auto;
-    /* هالة brand-header تتجاوز العرض بـ30% وتتنفّس — نقصّها هنا بدل
-       توليد شريط تمرير أفقي على الجوال. */
-    overflow: clip;
+    overflow: hidden;
   }
 
 
@@ -556,8 +558,8 @@ summary:focus-visible,
     inset: 0;
     margin: auto;
     z-index: -1;
-    width: 130%;
-    height: 150%;
+    width: 100%;
+    height: 100%;
     pointer-events: none;
     background: radial-gradient(
       closest-side,
