@@ -59,10 +59,10 @@ export function SplashClient() {
         <img
           src={assetPath("/brand/v2-light.svg")}
           alt="Focus Point"
-          width={150}
-          height={110}
+          width={160}
+          height={76}
           className="splash-logo splash-enter"
-          style={{ animationDelay: "80ms" }}
+          style={{ animationDelay: "80ms", objectFit: "contain", height: "auto", maxWidth: "85vw" }}
         />
 
         <p className="splash-tagline splash-enter" style={{ animationDelay: "220ms" }}>

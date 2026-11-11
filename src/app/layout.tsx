@@ -6,6 +6,7 @@ import { LanguageProvider } from "@/components/LanguageProvider";
 import { getServerLang } from "@/lib/server-lang";
 import { translate, type DictKey } from "@/lib/i18n";
 import { DemoMockClient } from "@/components/DemoMockClient";
+import { ViewSwitchButton } from "@/components/ViewSwitchButton";
 import "./globals.css";
 
 // Cairo للنصوص العربية، وInter للأرقام/الإنجليزية/العناصر الميكانيكية.
@@ -55,6 +56,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <LanguageProvider initialLang={lang}>
           <ToastProvider>
             <DemoMockClient />
+            <ViewSwitchButton />
             {children}
           </ToastProvider>
         </LanguageProvider>

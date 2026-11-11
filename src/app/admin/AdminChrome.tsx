@@ -30,11 +30,11 @@ export function AdminChrome({ children }: { children: ReactNode }) {
         <div className="border-b border-border px-6 py-5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={assetPath("/brand/v4-outline.svg")}
+            src={assetPath("/brand/logo.png")}
             alt="Focus Point"
             width={76}
-            height={36}
-            className="h-9 w-auto"
+            height={48}
+            className="h-10 w-auto object-contain"
           />
           <p className="mt-2 text-xs text-muted">{t("admin.chrome.label")}</p>
         </div>
@@ -46,13 +46,13 @@ export function AdminChrome({ children }: { children: ReactNode }) {
         {/* هيدر علوي (تابلت/موبايل): تنقل + شعار */}
         <header className="no-print flex items-center justify-between gap-2 border-b border-border bg-surface px-4 py-3 lg:hidden">
           <div className="flex items-center gap-2">
-{/* eslint-disable-next-line @next/next/no-img-element */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={assetPath("/brand/v4-outline.svg")}
+              src={assetPath("/brand/logo.png")}
               alt="Focus Point"
               width={59}
-              height={28}
-              className="h-7 w-auto"
+              height={38}
+              className="h-8 w-auto object-contain"
             />
             <span className="text-xs text-muted">{t("admin.chrome.label")}</span>
           </div>

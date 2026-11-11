@@ -239,11 +239,11 @@ export default async function EndedSessionPage({
       <div className="w-full max-w-md text-center animate-fade-in-up no-print">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={assetPath("/brand/v1-dark.svg")}
+          src={assetPath("/brand/logo.png")}
           alt="Focus Point"
-          width={71}
-          height={48}
-          className="mx-auto h-12 w-auto object-contain"
+          width={80}
+          height={54}
+          className="mx-auto h-14 w-auto object-contain"
         />
         <span className="badge badge-live mx-auto mt-4 w-fit">
           <span className="pulse-dot" />
