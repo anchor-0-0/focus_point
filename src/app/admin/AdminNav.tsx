@@ -21,8 +21,9 @@ const LINKS = [
 type NavKey = (typeof LINKS)[number]["key"];
 
 function isActive(pathname: string, href: string) {
-  if (href === "/admin") return pathname === "/admin";
-  return pathname.startsWith(href);
+  const clean = pathname.replace(/^\/focus_point/, "") || "/";
+  if (href === "/admin") return clean === "/admin" || clean === "/admin/";
+  return clean.startsWith(href);
 }
 
 export function LogoutButton() {
@@ -84,6 +85,12 @@ export function AdminNav() {
         })}
       </ul>
       <div className="flex flex-col gap-2">
+        <Link
+          href="/checkin"
+          className="rounded-lg px-3 py-1.5 text-xs text-muted hover:text-foreground text-center border border-border/60 transition"
+        >
+          واجهة تسجيل الطلاب ←
+        </Link>
         <HospitalityQuickLogButton />
         <LogoutButton />
       </div>
@@ -95,7 +102,15 @@ export function AdminNavCompact() {
   const pathname = usePathname();
   const { t } = useI18n();
   return (
-    <ul className="flex gap-1">
+    <ul className="flex gap-1 items-center">
+      <li>
+        <Link
+          href="/checkin"
+          className="whitespace-nowrap rounded-lg px-2.5 py-1 text-[11px] font-medium text-muted hover:text-foreground border border-border/60 transition"
+        >
+          واجهة الطالب ←
+        </Link>
+      </li>
       {LINKS.map((link) => {
         const active = isActive(pathname, link.href);
         return (

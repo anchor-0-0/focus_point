@@ -14,7 +14,8 @@ import { useI18n } from "@/components/LanguageProvider";
 export function AdminChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { t } = useI18n();
-  const isLogin = pathname === "/admin/login";
+  const cleanPath = pathname.replace(/^\/focus_point/, "").replace(/\/$/, "");
+  const isLogin = cleanPath === "/admin/login";
 
   if (isLogin) {
     return <>{children}</>;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/BrandHeader";
 import { ActiveSessionGuard } from "@/components/ActiveSessionGuard";
@@ -48,6 +49,10 @@ export default function CheckinPage() {
         setStoredActiveSessionId(data.session_id);
         router.replace(`/session/${data.session_id}`);
       } else {
+        try {
+          localStorage.setItem("demo_student_name", name.trim());
+          localStorage.setItem("demo_student_phone", phone.trim());
+        } catch {}
         router.replace(`/checkin/room?student_id=${data.student_id}`);
       }
     } catch {
@@ -142,6 +147,16 @@ export default function CheckinPage() {
             )}
           </button>
         </form>
+
+        <div className="mt-5 border-t border-border/40 pt-4 text-center">
+          <Link
+            href="/admin"
+            className="inline-flex items-center gap-1.5 text-xs text-muted transition hover:text-primary font-medium"
+          >
+            <span>لوحة الإدارة والمشرفين</span>
+            <span dir="ltr">←</span>
+          </Link>
+        </div>
       </div>
       </main>
     </ActiveSessionGuard>

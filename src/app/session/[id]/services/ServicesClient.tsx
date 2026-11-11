@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/LanguageProvider";
@@ -142,7 +142,18 @@ export function ServicesClient({
   // عدّاد واحد حيّ للجذر كله + مراقبة حالة الجلسة: إن أنهى المدير جلستنا
   // من أي مكان (الداشبورد، الخريطة، جدول الجلسات) ننتقل فوراً إلى واجهة
   // "شكراً لزيارتك" — ولو كان نموذج طلب مفتوح في هذه اللحظة.
-  const { elapsedMs, recalibrate } = useLiveElapsed(checkInIso, serverNowIso);
+  const [activeCheckIn, setActiveCheckIn] = useState<string | null>(checkInIso);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("demo_session_info");
+      if (raw) {
+        const info = JSON.parse(raw);
+        if (info.checkInIso) setActiveCheckIn(info.checkInIso);
+      }
+    } catch {}
+  }, []);
+
+  const { elapsedMs, recalibrate } = useLiveElapsed(activeCheckIn, serverNowIso);
   useSessionWatcher({
     sessionId,
     onServerNow: recalibrate,

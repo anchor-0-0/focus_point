@@ -60,6 +60,21 @@ function RoomChoiceContent() {
         setError(data.error ?? t("room.err.generic"));
         setSubmitting(null);
       } else {
+        try {
+          const roomMap: Record<string, { room: string; groupLabel: string; seatNumber: number }> = {
+            social_table: { room: "social", groupLabel: "القاعة الاجتماعية", seatNumber: 2 },
+            silent_writing: { room: "silent", groupLabel: "القاعة الصامتة • طاولة كتابة", seatNumber: 3 },
+            silent_bar: { room: "silent", groupLabel: "القاعة الصامتة • البار الدراسي", seatNumber: 5 },
+            smoking_bar: { room: "smoking", groupLabel: "ركن المدخنين • بار التدخين", seatNumber: 1 },
+          };
+          const info = roomMap[seatGroup] || { room: "social", groupLabel: "القاعة الاجتماعية", seatNumber: 1 };
+          localStorage.setItem("demo_session_info", JSON.stringify({
+            checkInIso: new Date().toISOString(),
+            room: info.room,
+            groupLabel: info.groupLabel,
+            seatNumber: info.seatNumber,
+          }));
+        } catch {}
         // بعد نجاح التخصيص: نُخزّن معرف الجلسة فوراً حتى لو أُعيد فتح
         // المتصفح أو ضُغط زر الرجوع، نعلم أنها لا تزال نشطة.
         setStoredActiveSessionId(data.session_id);

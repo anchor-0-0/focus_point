@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/BrandHeader";
 import { useLiveElapsed } from "@/hooks/useLiveElapsed";
@@ -69,9 +70,38 @@ export function SessionClient({
   const router = useRouter();
   const { t } = useI18n();
 
-  // العدّاد يُحسب من وقت الدخول (checkInIso) المُرسل من الخادم مرة واحدة
-  // التصحيح — لا轰动ان في الصفحة فلا تتفرّق الأرقام.
-  const { elapsedMs, recalibrate } = useLiveElapsed(checkInIso, serverNowIso);
+  const [activeCheckIn, setActiveCheckIn] = useState<string | null>(checkInIso);
+  const [activeRoom, setActiveRoom] = useState<string | null>(room);
+  const [activeGroupLabel, setActiveGroupLabel] = useState<string | null>(groupLabel);
+  const [activeSeatNumber, setActiveSeatNumber] = useState<number | null>(seatNumber);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("demo_session_info");
+      if (raw) {
+        const info = JSON.parse(raw);
+        if (info.checkInIso) setActiveCheckIn(info.checkInIso);
+        if (info.room) setActiveRoom(info.room);
+        if (info.groupLabel) setActiveGroupLabel(info.groupLabel);
+        if (info.seatNumber !== undefined) setActiveSeatNumber(info.seatNumber);
+      } else if (sessionId === "demo") {
+        const nowIso = new Date().toISOString();
+        localStorage.setItem(
+          "demo_session_info",
+          JSON.stringify({
+            checkInIso: nowIso,
+            room: "silent",
+            groupLabel: "القاعة الصامتة",
+            seatNumber: 7,
+          })
+        );
+        setActiveCheckIn(nowIso);
+      }
+    } catch {}
+  }, [sessionId]);
+
+  // العدّاد يُحسب من وقت الدخول المُسجّل فعلياً للطالب ويبدأ بالعد تصاعدياً
+  const { elapsedMs, recalibrate } = useLiveElapsed(activeCheckIn, serverNowIso);
 
   // ============================================================
   // مراقبة حالة الجلسة: تصحيح العدّاد من موقّت الخادم الطازج، وعند
@@ -87,16 +117,16 @@ export function SessionClient({
   });
 
   // اسم القاعة كما تُعرض للطالب (لا الاسم التقني من قاعدة البيانات).
-  const roomId = roomIdOf(room);
+  const roomId = roomIdOf(activeRoom);
   const roomText = roomId ? t(ROOM_NAME_KEY[roomId]) : t("session.roomPrefix");
 
   // المقعد: نترجم تسمية المجموعة المحفوظة في قاعدة البيانات
   // ("Silent - Study Bar") إلى وصف مفهوم ("البار الدراسي · مقعد 3").
-  const groupText = groupTextOf(spotGroupOf(groupLabel), t);
+  const groupText = groupTextOf(spotGroupOf(activeGroupLabel), t);
   const badge =
-    seatNumber === null || seatNumber === undefined
+    activeSeatNumber === null || activeSeatNumber === undefined
       ? groupText
-      : `${groupText} • ${t("session.spot.seat")} ${seatNumber}`;
+      : `${groupText} • ${t("session.spot.seat")} ${activeSeatNumber}`;
 
   return (
     <main className="page">
@@ -142,6 +172,14 @@ export function SessionClient({
             <path d="M19 12H5" />
             <path d="m12 19-7-7 7-7" />
           </svg>
+        </button>
+
+        <button
+          type="button"
+          className="btn btn-secondary mt-3 w-full"
+          onClick={() => router.replace(`/session/${sessionId}/ended`)}
+        >
+          {t("ended.title") || "إنهاء الجلسة والحساب"}
         </button>
       </div>
     </main>

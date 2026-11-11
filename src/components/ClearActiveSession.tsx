@@ -13,6 +13,11 @@ import { clearStoredActiveSessionId } from "@/lib/active-session";
 export function ClearActiveSession() {
   useEffect(() => {
     clearStoredActiveSessionId();
+    try {
+      localStorage.removeItem("demo_session_info");
+      localStorage.removeItem("demo_student_name");
+      localStorage.removeItem("demo_student_phone");
+    } catch {}
   }, []);
 
   return null;

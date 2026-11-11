@@ -12,6 +12,7 @@ import { computeBilling } from "@/lib/billing";
 import { readHourlyRate } from "@/lib/settings";
 import { orderTotal, orderUnits, type OrderDetails } from "@/lib/orders";
 import { ClearActiveSession } from "@/components/ClearActiveSession";
+import { assetPath } from "@/lib/asset";
 import {
   InvoiceModal,
   type InvoiceData,
@@ -238,7 +239,7 @@ export default async function EndedSessionPage({
       <div className="w-full max-w-md text-center animate-fade-in-up no-print">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/brand/v1-dark.svg"
+          src={assetPath("/brand/v1-dark.svg")}
           alt="Focus Point"
           width={71}
           height={48}
