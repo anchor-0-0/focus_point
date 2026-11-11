@@ -49,7 +49,7 @@ export function useSessionWatcher({
       if (!res.ok) return;
 
       const data = await res.json();
-      if (typeof data?.server_now === "number") {
+      if (data?.server_now !== undefined) {
         serverNowRef.current?.(data.server_now);
       }
       if (data?.status === "ended") {

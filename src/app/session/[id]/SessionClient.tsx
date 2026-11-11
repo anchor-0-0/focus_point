@@ -70,10 +70,71 @@ export function SessionClient({
   const router = useRouter();
   const { t } = useI18n();
 
-  const [activeCheckIn, setActiveCheckIn] = useState<string | null>(checkInIso);
-  const [activeRoom, setActiveRoom] = useState<string | null>(room);
-  const [activeGroupLabel, setActiveGroupLabel] = useState<string | null>(groupLabel);
-  const [activeSeatNumber, setActiveSeatNumber] = useState<number | null>(seatNumber);
+  // قراءة متزامنة فورية من التخزين المحلي لتجنب وميض أو تأخير العداد
+  const [activeCheckIn, setActiveCheckIn] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("demo_session_info");
+        if (raw) {
+          const info = JSON.parse(raw);
+          if (info.checkInIso) return info.checkInIso;
+        }
+        if (sessionId === "demo") {
+          const nowIso = new Date().toISOString();
+          localStorage.setItem(
+            "demo_session_info",
+            JSON.stringify({
+              checkInIso: nowIso,
+              room: "silent",
+              groupLabel: "القاعة الصامتة • طاولة كتابة A",
+              seatNumber: 3,
+            })
+          );
+          return nowIso;
+        }
+      } catch {}
+    }
+    return checkInIso;
+  });
+
+  const [activeRoom, setActiveRoom] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("demo_session_info");
+        if (raw) {
+          const info = JSON.parse(raw);
+          if (info.room) return info.room;
+        }
+      } catch {}
+    }
+    return room;
+  });
+
+  const [activeGroupLabel, setActiveGroupLabel] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("demo_session_info");
+        if (raw) {
+          const info = JSON.parse(raw);
+          if (info.groupLabel) return info.groupLabel;
+        }
+      } catch {}
+    }
+    return groupLabel;
+  });
+
+  const [activeSeatNumber, setActiveSeatNumber] = useState<number | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("demo_session_info");
+        if (raw) {
+          const info = JSON.parse(raw);
+          if (info.seatNumber !== undefined) return info.seatNumber;
+        }
+      } catch {}
+    }
+    return seatNumber;
+  });
 
   useEffect(() => {
     try {
@@ -84,18 +145,6 @@ export function SessionClient({
         if (info.room) setActiveRoom(info.room);
         if (info.groupLabel) setActiveGroupLabel(info.groupLabel);
         if (info.seatNumber !== undefined) setActiveSeatNumber(info.seatNumber);
-      } else if (sessionId === "demo") {
-        const nowIso = new Date().toISOString();
-        localStorage.setItem(
-          "demo_session_info",
-          JSON.stringify({
-            checkInIso: nowIso,
-            room: "silent",
-            groupLabel: "القاعة الصامتة",
-            seatNumber: 7,
-          })
-        );
-        setActiveCheckIn(nowIso);
       }
     } catch {}
   }, [sessionId]);

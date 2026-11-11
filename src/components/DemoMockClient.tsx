@@ -77,7 +77,8 @@ export function DemoMockClient() {
           return jsonResponse({
             ok: true,
             status: "active",
-            server_now: new Date().toISOString(),
+            server_now: Date.now(),
+            server_now_iso: new Date().toISOString(),
           });
         }
 
@@ -125,12 +126,12 @@ export function DemoMockClient() {
               silent: 10,
               smoking: 4,
             },
-            occupied_total: 18,
+            occupied_total: 19,
             total_spots: 35,
             occupancy: [
-              { room: "social", occupied: 8, total: 16 },
-              { room: "silent", occupied: 7, total: 12 },
-              { room: "smoking", occupied: 3, total: 7 },
+              { room: "social", occupied: 8, total: 15 },
+              { room: "silent", occupied: 8, total: 14 },
+              { room: "smoking", occupied: 3, total: 6 },
             ],
           });
         }
@@ -154,6 +155,7 @@ export function DemoMockClient() {
           const id = path.split("/").pop();
           return jsonResponse({
             ok: true,
+            server_now: Date.now(),
             session: getMockSessionDetail(id || "demo-s1"),
           });
         }
@@ -335,7 +337,7 @@ function getMockChairs() {
 
   const now = Date.now();
 
-  // Social: 5 طاولات × 3 كراسي + 1 مقعد بار = 16 كرسي
+  // Social: 5 طاولات دائرية × 3 كراسي = 15 مقعد
   const socialStudents = [
     "نور الهدى العلي",
     "عمر الشامي",
@@ -349,15 +351,15 @@ function getMockChairs() {
   let sIdx = 0;
   for (let table = 1; table <= 5; table++) {
     for (let seat = 1; seat <= 3; seat++) {
-      const isOcc = sIdx < socialStudents.length;
+      const isOcc = sIdx < socialStudents.length && (table !== 5 || seat === 1);
       chairs.push({
         id: `soc-t${table}-s${seat}`,
         room: "social",
-        group_label: `Table ${table}`,
+        group_label: `Social - Table ${table}`,
         seat_number: seat,
         occupied: isOcc,
         session_id: isOcc ? `demo-s-${table}-${seat}` : null,
-        student_name: isOcc ? socialStudents[sIdx] : null,
+        student_name: isOcc ? socialStudents[sIdx % socialStudents.length] : null,
         check_in: isOcc
           ? new Date(now - (35 + sIdx * 12) * 60 * 1000).toISOString()
           : null,
@@ -365,18 +367,8 @@ function getMockChairs() {
       if (isOcc) sIdx++;
     }
   }
-  chairs.push({
-    id: "soc-bar-1",
-    room: "social",
-    group_label: "Social Bar",
-    seat_number: 1,
-    occupied: false,
-    session_id: null,
-    student_name: null,
-    check_in: null,
-  });
 
-  // Silent: طاولتا كتابة (4 كراسي لكل منهما) + بار دراسي (4 كراسي) = 12 كرسي
+  // Silent: طاولتا كتابة (4 كراسي لكل منهما = 8 كراسي) + بار دراسي (6 كراسي) = 14 مقعد
   const silentStudents = [
     "طارق المصري",
     "ريم الحلبي",
@@ -387,17 +379,17 @@ function getMockChairs() {
     "فادي يوسف",
   ];
   let silIdx = 0;
-  ["Writing Table A", "Writing Table B"].forEach((tbl) => {
+  ["Silent - Writing Table A", "Silent - Writing Table B"].forEach((tbl, tIdx) => {
     for (let seat = 1; seat <= 4; seat++) {
-      const isOcc = silIdx < 4 && silIdx < silentStudents.length;
+      const isOcc = (tIdx === 0 && seat <= 3) || (tIdx === 1 && seat <= 2);
       chairs.push({
-        id: `sil-${tbl.replace(/\s+/g, "")}-s${seat}`,
+        id: `sil-w-${tIdx === 0 ? "a" : "b"}-s${seat}`,
         room: "silent",
         group_label: tbl,
         seat_number: seat,
         occupied: isOcc,
-        session_id: isOcc ? `demo-sil-${seat}` : null,
-        student_name: isOcc ? silentStudents[silIdx] : null,
+        session_id: isOcc ? `demo-sil-w-${tIdx}-${seat}` : null,
+        student_name: isOcc ? silentStudents[silIdx % silentStudents.length] : null,
         check_in: isOcc
           ? new Date(now - (40 + silIdx * 18) * 60 * 1000).toISOString()
           : null,
@@ -406,31 +398,30 @@ function getMockChairs() {
     }
   });
 
-  for (let seat = 1; seat <= 4; seat++) {
-    const isOcc = silIdx < silentStudents.length;
+  for (let seat = 1; seat <= 6; seat++) {
+    const isOcc = seat <= 3;
     chairs.push({
       id: `sil-bar-s${seat}`,
       room: "silent",
-      group_label: "Study Bar",
+      group_label: "Silent - Study Bar",
       seat_number: seat,
       occupied: isOcc,
       session_id: isOcc ? `demo-sil-bar-${seat}` : null,
-      student_name: isOcc ? silentStudents[silIdx] : null,
+      student_name: isOcc ? silentStudents[(silIdx + seat) % silentStudents.length] : null,
       check_in: isOcc
-        ? new Date(now - (20 + silIdx * 10) * 60 * 1000).toISOString()
+        ? new Date(now - (20 + seat * 10) * 60 * 1000).toISOString()
         : null,
     });
-    if (isOcc) silIdx++;
   }
 
-  // Smoking: بار واحد (7 كراسي)
+  // Smoking: بار تدخين واحد (6 كراسي)
   const smokingStudents = ["باسل عواد", "جود مراد", "زياد حيدر"];
-  for (let seat = 1; seat <= 7; seat++) {
+  for (let seat = 1; seat <= 6; seat++) {
     const isOcc = seat <= smokingStudents.length;
     chairs.push({
       id: `smk-bar-s${seat}`,
       room: "smoking",
-      group_label: "Smoking Bar",
+      group_label: "Smoking - Bar",
       seat_number: seat,
       occupied: isOcc,
       session_id: isOcc ? `demo-smk-${seat}` : null,
@@ -451,7 +442,7 @@ function getMockActiveSessions() {
       id: "demo-s1",
       student_name: "نور الهدى العلي",
       spot_room: "social",
-      spot_group_label: "Table 1",
+      spot_group_label: "Social - Table 1",
       spot_seat_number: 1,
       check_in: new Date(now - 85 * 60 * 1000).toISOString(),
       billable_hours: 1.5,
@@ -461,7 +452,7 @@ function getMockActiveSessions() {
       id: "demo-s2",
       student_name: "طارق المصري",
       spot_room: "silent",
-      spot_group_label: "Writing Table A",
+      spot_group_label: "Silent - Writing Table A",
       spot_seat_number: 2,
       check_in: new Date(now - 130 * 60 * 1000).toISOString(),
       billable_hours: 2.5,
@@ -471,7 +462,7 @@ function getMockActiveSessions() {
       id: "demo-s3",
       student_name: "عمر الشامي",
       spot_room: "social",
-      spot_group_label: "Table 2",
+      spot_group_label: "Social - Table 2",
       spot_seat_number: 2,
       check_in: new Date(now - 45 * 60 * 1000).toISOString(),
       billable_hours: 1.0,
@@ -481,7 +472,7 @@ function getMockActiveSessions() {
       id: "demo-s4",
       student_name: "ريم الحلبي",
       spot_room: "silent",
-      spot_group_label: "Writing Table B",
+      spot_group_label: "Silent - Writing Table B",
       spot_seat_number: 1,
       check_in: new Date(now - 170 * 60 * 1000).toISOString(),
       billable_hours: 3.0,
@@ -491,7 +482,7 @@ function getMockActiveSessions() {
       id: "demo-s5",
       student_name: "باسل عواد",
       spot_room: "smoking",
-      spot_group_label: "Smoking Bar",
+      spot_group_label: "Smoking - Bar",
       spot_seat_number: 1,
       check_in: new Date(now - 60 * 60 * 1000).toISOString(),
       billable_hours: 1.0,
@@ -501,7 +492,7 @@ function getMockActiveSessions() {
       id: "demo-s6",
       student_name: "مايا كمال",
       spot_room: "social",
-      spot_group_label: "Table 3",
+      spot_group_label: "Social - Table 3",
       spot_seat_number: 1,
       check_in: new Date(now - 110 * 60 * 1000).toISOString(),
       billable_hours: 2.0,
@@ -511,16 +502,25 @@ function getMockActiveSessions() {
 }
 
 function getMockSessionDetail(id: string) {
+  const chairs = getMockChairs();
+  const chair = chairs.find((c) => c.session_id === id);
   const now = Date.now();
+
+  const studentName = chair?.student_name || "نور الهدى العلي";
+  const checkIn = chair?.check_in || new Date(now - 85 * 60 * 1000).toISOString();
+  const room = chair?.room || "social";
+  const groupLabel = chair?.group_label || "Social - Table 1";
+  const seatNumber = chair?.seat_number || 1;
+
   return {
     id,
     status: "active",
-    check_in: new Date(now - 85 * 60 * 1000).toISOString(),
-    student_name: "نور الهدى العلي",
+    check_in: checkIn,
+    student_name: studentName,
     student_phone: "0944111222",
-    spot_room: "social",
-    spot_group_label: "Table 1",
-    spot_seat_number: 1,
+    spot_room: room,
+    spot_group_label: groupLabel,
+    spot_seat_number: seatNumber,
     orders: [
       {
         id: "ord-d-1",

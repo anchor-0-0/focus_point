@@ -37,6 +37,20 @@ export function ActiveSessionGuard({
   useEffect(() => {
     let cancelled = false;
 
+    // في وضع العرض التجريبي (GitHub Pages أو DEMO_MODE): نسمح للزائر دائماً برؤية
+    // شاشة تسجيل الدخول واختبار تعبئة البيانات دون أن نحتجزه في شاشة العداد القديمة.
+    const isDemo =
+      process.env.NEXT_PUBLIC_DEMO_MODE === "true" ||
+      (typeof window !== "undefined" &&
+        (window.location.hostname.includes("github.io") ||
+          window.location.pathname.startsWith("/focus_point") ||
+          window.localStorage.getItem("fp_demo_mode") === "true"));
+
+    if (isDemo) {
+      setChecking(false);
+      return;
+    }
+
     (async () => {
       const storedId = getStoredActiveSessionId();
       if (!storedId) return;
@@ -60,13 +74,11 @@ export function ActiveSessionGuard({
           // انتهت أو استجابة غريبة → لا نقفل الطالب، نمسح ونعرض الفورم.
           clearStoredActiveSessionId();
         } else if (data.status === "active") {
-          // جلسته لا تزال حية → نعيده إليها فوراً (باستبدال الصفحة
-          // الحالية في سجل التصفح حتى لا تعود الأزرار المدوّرة إليه).
+          // جلسته لا تزال حية → نعيده إليها فوراً
           router.replace(`/session/${storedId}`);
         }
       } catch {
-        // خطأ شبكة/خادم مؤقت: لا نمسح شيئاً ولا نمنع التسجيل —
-        // نعرض الفورم بشكل طبيعي للسماح بالمتابعة.
+        // خطأ شبكة/خادم مؤقت: نعرض الفورم بشكل طبيعي للسماح بالمتابعة.
       }
     })().finally(() => {
       if (!cancelled) setChecking(false);

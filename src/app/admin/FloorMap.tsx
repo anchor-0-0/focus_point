@@ -123,6 +123,15 @@ export function FloorMap() {
     }
   }
 
+  const silentWritingTables = group("silent").filter(([label]) =>
+    label.toLowerCase().includes("writing")
+  );
+  const silentBarChairs = groupOf(group("silent"), "Silent - Study Bar");
+  const smokingChairs =
+    groupOf(group("smoking"), "Smoking - Bar").length > 0
+      ? groupOf(group("smoking"), "Smoking - Bar")
+      : byRoom("smoking");
+
   return (
     <div className="flex flex-col gap-6">
       {error && <p className="text-sm text-danger">{error}</p>}
@@ -149,7 +158,7 @@ export function FloorMap() {
               className={
                 row.length === 1
                   ? "flex justify-center"
-                  : "flex items-start justify-center gap-6 sm:gap-10"
+                  : "flex flex-wrap items-center justify-center gap-4 sm:gap-10"
               }
             >
               {row.map((label) => (
@@ -171,26 +180,26 @@ export function FloorMap() {
         occupied={count("silent")}
         total={byRoom("silent").length}
       >
-        <div className="flex flex-col gap-5">
-          <div className="flex flex-wrap justify-center gap-6 sm:gap-10">
-            {group("silent")
-              .filter(([label]) => label.startsWith("Silent - Writing"))
-              .map(([label, list]) => (
-                <WritingTable
-                  key={label}
-                  label={label}
-                  chairs={list}
-                  now={now}
-                  onSelect={openDetails}
-                />
-              ))}
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-10">
+            {silentWritingTables.map(([label, list]) => (
+              <WritingTable
+                key={label}
+                label={label}
+                chairs={list}
+                now={now}
+                onSelect={openDetails}
+              />
+            ))}
           </div>
-          <BarGroup
-            label="Silent - Study Bar"
-            chairs={groupOf(group("silent"), "Silent - Study Bar")}
-            now={now}
-            onSelect={openDetails}
-          />
+          <div className="w-full overflow-x-auto py-1 flex justify-center">
+            <BarGroup
+              label="Silent - Study Bar"
+              chairs={silentBarChairs}
+              now={now}
+              onSelect={openDetails}
+            />
+          </div>
         </div>
       </RoomPanel>
 
@@ -199,15 +208,17 @@ export function FloorMap() {
         occupied={count("smoking")}
         total={byRoom("smoking").length}
       >
-        <BarGroup
-          label="Smoking - Bar"
-          chairs={groupOf(group("smoking"), "Smoking - Bar")}
-          now={now}
-          onSelect={openDetails}
-        />
+        <div className="w-full overflow-x-auto py-1 flex justify-center">
+          <BarGroup
+            label="Smoking - Bar"
+            chairs={smokingChairs}
+            now={now}
+            onSelect={openDetails}
+          />
+        </div>
       </RoomPanel>
 
-      <div className="map-legend">
+      <div className="map-legend flex-wrap gap-3 sm:gap-5">
         <span className="flex items-center gap-2">
           <span className="map-seat-free" /> {t("admin.map.free")}
         </span>
@@ -229,7 +240,24 @@ export function FloorMap() {
 }
 
 function groupOf(list: [string, Chair[]][], label: string): Chair[] {
-  return list.find(([l]) => l === label)?.[1] ?? [];
+  // 1. تطابق تام
+  const exact = list.find(([l]) => l === label)?.[1];
+  if (exact && exact.length > 0) return exact;
+
+  // 2. تطابق مرن بتجاهل اسم القاعة والمسافات
+  const stripped = label.replace(/^(Social|Silent|Smoking)\s*-\s*/i, "").trim().toLowerCase();
+  const loose = list.find(([l]) => {
+    const lStripped = l.replace(/^(Social|Silent|Smoking)\s*-\s*/i, "").trim().toLowerCase();
+    return lStripped === stripped || l.toLowerCase().includes(stripped) || stripped.includes(lStripped);
+  })?.[1];
+  if (loose && loose.length > 0) return loose;
+
+  // 3. تطابق بالكلمة المفتاحية
+  if (stripped.includes("bar")) {
+    const bar = list.find(([l]) => l.toLowerCase().includes("bar"))?.[1];
+    if (bar && bar.length > 0) return bar;
+  }
+  return [];
 }
 
 function RoomPanel({
@@ -245,7 +273,7 @@ function RoomPanel({
 }) {
   const { t, tw } = useI18n();
   return (
-    <section className="rounded-xl border border-border bg-surface p-4 sm:p-5" style={{ boxShadow: "var(--shadow-card)" }}>
+    <section className="rounded-xl border border-border bg-surface p-3.5 sm:p-5" style={{ boxShadow: "var(--shadow-card)" }}>
       <div className="mb-4 flex items-center justify-between gap-3">
         <h2 className="admin-section-title mb-0">{title}</h2>
         <span className="price-chip tabular-nums">
@@ -255,7 +283,9 @@ function RoomPanel({
       {total === 0 ? (
         <EmptyState title={t("admin.map.emptySeats")} hint={t("admin.map.emptySeatsHint")} />
       ) : (
-        children
+        <div className="w-full max-w-full overflow-x-auto py-1">
+          {children}
+        </div>
       )}
     </section>
   );
@@ -282,7 +312,7 @@ function RoundTable({
 }) {
   const seat = (i: number) => chairs[i];
   return (
-    <div className="map-round-table">
+    <div className="map-round-table shrink-0">
       <div className="map-seat-row">
         <ChairDot chair={seat(0)} now={now} onSelect={onSelect} />
         <ChairDot chair={seat(1)} now={now} onSelect={onSelect} />
@@ -308,7 +338,7 @@ function WritingTable({
 }) {
   // 4 كراسي: 2 فوق و2 تحت (هيئة طاولة كتابة).
   return (
-    <div className="map-write-table">
+    <div className="map-write-table shrink-0">
       <div className="map-seat-row">
         <ChairDot chair={chairs[0]} now={now} onSelect={onSelect} />
         <ChairDot chair={chairs[1]} now={now} onSelect={onSelect} />
@@ -335,7 +365,7 @@ function BarGroup({
 }) {
   return (
     <div className="map-bar-group">
-      <div className="map-seat-row">
+      <div className="map-seat-row flex-nowrap overflow-x-auto py-1 gap-2.5 sm:gap-3">
         {chairs.map((c) => (
           <ChairDot key={c.id} chair={c} now={now} onSelect={onSelect} />
         ))}

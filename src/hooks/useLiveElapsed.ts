@@ -12,38 +12,41 @@ export function useLiveElapsed(
   checkInIso?: string | null,
   serverNowIso?: string | null
 ) {
-  // ما يعرضه العدّاد يعتمد كلياً على وقت الدخول من قاعدة البيانات،
-  // لذا أي رجوع للصفحة يحسبه من جديد بموقّت حقيقي بدل كاش قديم.
   const checkInMs = checkInIso ? new Date(checkInIso).getTime() : 0;
 
-  // فرق ساعات العميل عن الخادم — بذرة أولية تُزرع مرة واحدة بعد التركيب
-  // (خارج التصيير لتبقى خالصة)، ثم تُصحَّح تلقائياً عبر recalibrate من
-  // موقّت الخادم الطازج عند كل poll.
   const skewRef = useRef<number>(0);
   const seededRef = useRef<boolean>(false);
 
-  const [elapsedMs, setElapsedMs] = useState<number>(0);
+  // حساب فوري متزامن على أول تصيير (يبدأ العدّ فوراً دون أي تأخير أو انتظار)
+  const [elapsedMs, setElapsedMs] = useState<number>(() => {
+    if (!checkInMs || isNaN(checkInMs)) return 0;
+    return Math.max(0, Date.now() - checkInMs);
+  });
 
   useEffect(() => {
     if (!seededRef.current) {
       seededRef.current = true;
       if (serverNowIso) {
-        skewRef.current = new Date(serverNowIso).getTime() - Date.now();
+        const diff = new Date(serverNowIso).getTime() - Date.now();
+        // نتجاهل أي serverNowIso قديم ناتج عن التوليد المسبق (أكثر من 30 ثانية فرق)
+        if (Math.abs(diff) < 30_000) {
+          skewRef.current = diff;
+        } else {
+          skewRef.current = 0;
+        }
       }
     }
 
     let timeout: ReturnType<typeof setTimeout> | undefined;
 
     const tick = () => {
-      if (!checkInMs) {
+      if (!checkInMs || isNaN(checkInMs)) {
         setElapsedMs(0);
         return;
       }
       setElapsedMs(Math.max(0, Date.now() + skewRef.current - checkInMs));
     };
 
-    // نُسق كل نبضة مع حدود الثانية الحقيقية: لو تأخّرت النبضة (تبويب مخفي أو
-    // تصيير ثقيل) تُلتقط في حدود الثانية التالية بدل أن ينكسر الإيقاع.
     const schedule = () => {
       timeout = setTimeout(() => {
         tick();
@@ -59,11 +62,22 @@ export function useLiveElapsed(
     };
   }, [checkInMs, serverNowIso]);
 
-  // تصحيح فرق الساعات من موقّت الخادم الطازج (رقمي: server_now بالمللي).
+  // تصحيح فرق الساعات من موقّت الخادم الطازج (رقمي أو ISO string).
   const recalibrate = useCallback(
-    (serverNowMs: number) => {
-      skewRef.current = serverNowMs - Date.now();
-      setElapsedMs(Math.max(0, Date.now() + skewRef.current - checkInMs));
+    (serverNow: number | string) => {
+      const serverNowMs =
+        typeof serverNow === "number"
+          ? serverNow
+          : typeof serverNow === "string"
+          ? new Date(serverNow).getTime()
+          : NaN;
+
+      if (!isNaN(serverNowMs)) {
+        skewRef.current = serverNowMs - Date.now();
+        if (checkInMs) {
+          setElapsedMs(Math.max(0, Date.now() + skewRef.current - checkInMs));
+        }
+      }
     },
     [checkInMs]
   );

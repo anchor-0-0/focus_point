@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/BrandHeader";
 import { ActiveSessionGuard } from "@/components/ActiveSessionGuard";
-import { setStoredActiveSessionId } from "@/lib/active-session";
+import { setStoredActiveSessionId, getStoredActiveSessionId } from "@/lib/active-session";
 import { useI18n } from "@/components/LanguageProvider";
 
 export default function CheckinPage() {
@@ -15,6 +15,14 @@ export default function CheckinPage() {
   const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const stored = getStoredActiveSessionId();
+      if (stored) setActiveSessionId(stored);
+    } catch {}
+  }, []);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -52,6 +60,8 @@ export default function CheckinPage() {
         try {
           localStorage.setItem("demo_student_name", name.trim());
           localStorage.setItem("demo_student_phone", phone.trim());
+          // مسح أي جلسة تجريبية سابقة لبدء عداد جديد
+          localStorage.removeItem("demo_session_info");
         } catch {}
         router.replace(`/checkin/room?student_id=${data.student_id}`);
       }
@@ -67,6 +77,21 @@ export default function CheckinPage() {
       <main className="page">
       <BrandHeader variant="large" />
       <div className="w-full max-w-md animate-fade-in-up">
+        {activeSessionId && (
+          <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-primary/25 bg-surface p-3.5 text-xs shadow-sm">
+            <span className="flex items-center gap-2 font-medium text-foreground">
+              <span className="live-dot-green" aria-hidden="true" />
+              توجد جلسة نشطة جارية
+            </span>
+            <Link
+              href={`/session/${activeSessionId}`}
+              className="font-semibold text-primary underline underline-offset-4 hover:opacity-80"
+            >
+              الذهاب إلى العداد ←
+            </Link>
+          </div>
+        )}
+
         <div className="screen-header mb-8">
           <span className="badge badge-neutral">{t("checkin.step")}</span>
           <h1 className="screen-title">{t("checkin.title")}</h1>
