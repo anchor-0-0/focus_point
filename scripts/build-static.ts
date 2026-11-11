@@ -59,6 +59,18 @@ try {
       fs.copyFileSync(indexHtml, notFoundHtml);
       console.log("📄 تم نسخ out/404.html لدعم التوجيه.");
     }
+
+    // نسخ إلى مجلد dist أيضاً لتطابق التسميات
+    const distDir = path.join(root, "dist");
+    try {
+      if (fs.existsSync(distDir)) {
+        fs.rmSync(distDir, { recursive: true, force: true });
+      }
+      fs.cpSync(outDir, distDir, { recursive: true });
+      console.log("📄 تم تحديث مجلد dist/ بنجاح مطابقاً لـ out/.");
+    } catch (e) {
+      console.warn("تعذر نسخ dist:", e);
+    }
   }
 
   console.log("\n🎉 جاهز! المجلد out/ جاهز للنشر على GitHub Pages.");

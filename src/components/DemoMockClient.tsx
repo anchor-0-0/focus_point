@@ -56,10 +56,6 @@ export function DemoMockClient() {
         // 1. تسجيل الطالب (/api/checkin)
         // ---------------------------------------------------------
         if (path.endsWith("/api/checkin")) {
-          toastRef.current(
-            "نسخة عرض تجريبية (Demo): تم تسجيل بيانات الاختبار بنجاح!",
-            "success"
-          );
           return jsonResponse({ ok: true, student_id: "demo-student-id" });
         }
 
@@ -67,10 +63,6 @@ export function DemoMockClient() {
         // 2. تخصيص المقعد (/api/assign-chair)
         // ---------------------------------------------------------
         if (path.endsWith("/api/assign-chair")) {
-          toastRef.current(
-            "نسخة تجريبية: تم تخصيص مقعد تجريبي في القاعة المختارة بنجاح!",
-            "success"
-          );
           return jsonResponse({
             ok: true,
             session_id: "demo",
@@ -93,10 +85,6 @@ export function DemoMockClient() {
         // 4. طلبات الخدمات والمشروبات
         // ---------------------------------------------------------
         if (path.endsWith("/api/orders") && method === "POST") {
-          toastRef.current(
-            "نسخة تجريبية (Demo): تم استلام طلبك للعرض فقط (غير متصل بمطبخ حقيقي).",
-            "success"
-          );
           return jsonResponse({ ok: true, order_id: "demo-ord-" + Date.now() });
         }
 
@@ -104,10 +92,6 @@ export function DemoMockClient() {
         // 5. طلبات الطباعة
         // ---------------------------------------------------------
         if (path.endsWith("/api/orders/print") && method === "POST") {
-          toastRef.current(
-            "نسخة تجريبية (Demo): تم استقبال ملف الطباعة للاستعراض.",
-            "success"
-          );
           return jsonResponse({ ok: true, order_id: "demo-print-" + Date.now() });
         }
 
@@ -298,7 +282,6 @@ export function DemoMockClient() {
         // 17. تسجيل دخول الإدارة (/api/admin/login)
         // ---------------------------------------------------------
         if (path.endsWith("/api/admin/login")) {
-          toastRef.current("تم الدخول إلى لوحة التحكم التجريبية بنجاح!", "success");
           return jsonResponse({ ok: true });
         }
 

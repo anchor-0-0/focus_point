@@ -5,7 +5,6 @@ import { ToastProvider } from "@/components/Toast";
 import { LanguageProvider } from "@/components/LanguageProvider";
 import { getServerLang } from "@/lib/server-lang";
 import { translate, type DictKey } from "@/lib/i18n";
-import { DemoBadge } from "@/components/DemoBadge";
 import { DemoMockClient } from "@/components/DemoMockClient";
 import "./globals.css";
 
@@ -55,7 +54,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <body className="min-h-full bg-background text-foreground">
         <LanguageProvider initialLang={lang}>
           <ToastProvider>
-            <DemoBadge />
             <DemoMockClient />
             {children}
           </ToastProvider>
